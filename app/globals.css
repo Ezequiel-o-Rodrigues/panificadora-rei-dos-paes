@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  /* ===== Onyx (preto profundo) ===== */
+  --color-onyx-50: #fafaf9;
+  --color-onyx-100: #f2f1ee;
+  --color-onyx-200: #d6d3ce;
+  --color-onyx-300: #a8a29e;
+  --color-onyx-400: #78716c;
+  --color-onyx-500: #57534e;
+  --color-onyx-600: #3c3633;
+  --color-onyx-700: #26211e;
+  --color-onyx-800: #171412;
+  --color-onyx-900: #0c0a09;
+  --color-onyx-950: #050403;
+
+  /* ===== Flame (laranja vivo do logo) ===== */
+  --color-flame-50: #fff5eb;
+  --color-flame-100: #ffe4c4;
+  --color-flame-200: #ffc78a;
+  --color-flame-300: #ffa855;
+  --color-flame-400: #ff8c28;
+  --color-flame-500: #ff6d0a;
+  --color-flame-600: #e85500;
+  --color-flame-700: #b83f00;
+  --color-flame-800: #8a2f00;
+  --color-flame-900: #5c1f00;
+
+  /* ===== Rust (vermelho brasa) ===== */
+  --color-rust-400: #ef4444;
+  --color-rust-500: #dc2626;
+  --color-rust-600: #b91c1c;
+  --color-rust-700: #991b1b;
+  --color-rust-800: #7f1d1d;
+  --color-rust-900: #450a0a;
+
+  /* ===== Ivory (texto claro) ===== */
+  --color-ivory-50: #fafaf5;
+  --color-ivory-100: #f5f4ec;
+  --color-ivory-200: #ece9d8;
+
+  /* ===== Semânticos ===== */
+  --color-background: #1f1712;
+  --color-surface: #2a1f18;
+  --color-surface-raised: #352820;
+  --color-foreground: var(--color-ivory-50);
+  --color-muted: var(--color-onyx-800);
+  --color-muted-foreground: var(--color-onyx-300);
+  --color-border: var(--color-onyx-700);
+  --color-ring: var(--color-flame-500);
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+
+  --shadow-flame: 0 0 40px rgba(255, 109, 10, 0.35), 0 10px 30px -10px rgba(220, 38, 38, 0.3);
+  --shadow-glow-lg: 0 0 60px rgba(255, 140, 40, 0.5);
+  --shadow-deep: 0 25px 60px -20px rgba(0, 0, 0, 0.9);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1400px 700px at 15% -5%, rgba(255, 140, 40, 0.35), transparent 55%),
+    radial-gradient(1000px 600px at 95% 5%, rgba(220, 38, 38, 0.22), transparent 60%),
+    radial-gradient(900px 500px at 50% 100%, rgba(255, 109, 10, 0.18), transparent 65%),
+    linear-gradient(180deg, #2a1f18 0%, #1f1712 45%, #17110d 100%);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50, "WONK" 0;
+  letter-spacing: -0.02em;
+}
+
+.glass {
+  background: linear-gradient(
+    135deg,
+    rgba(62, 48, 38, 0.78),
+    rgba(38, 28, 22, 0.62)
+  );
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 140, 40, 0.22);
+  box-shadow: var(--shadow-deep);
+}
+
+.glass-flame {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 109, 10, 0.14),
+    rgba(220, 38, 38, 0.08)
+  );
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 140, 40, 0.3);
+}
+
+.text-gradient-flame {
+  background: linear-gradient(135deg, #ffa855 0%, #ff6d0a 45%, #dc2626 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+.bg-grain {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px
+  );
+  background-size: 4px 4px;
+}
+
+.ring-flame {
+  box-shadow: 0 0 0 1px rgba(255, 140, 40, 0.4),
+              0 0 30px -5px rgba(255, 109, 10, 0.5);
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.animate-flicker {
+  animation: flicker 3.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
