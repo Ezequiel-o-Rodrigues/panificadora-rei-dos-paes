@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categorias, produtos } from "@/db/schema";
 import { formatBRL } from "@/lib/money";
+import { ProductImage } from "@/components/shared/ProductImage";
 
 export const metadata = {
   title: "Cardápio",
@@ -76,18 +77,32 @@ export default async function CardapioPage() {
                   {cat.produtos.length === 1 ? "item" : "itens"}
                 </span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {cat.produtos.map((p) => (
                   <article
                     key={p.id}
-                    className="group relative overflow-hidden rounded-3xl border border-onyx-700/80 bg-onyx-900/60 p-5 backdrop-blur-sm transition hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame"
+                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-onyx-700/80 bg-onyx-900/60 backdrop-blur-sm transition hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame"
                   >
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-gradient-to-br from-flame-500/30 via-rust-600/15 to-transparent blur-2xl transition group-hover:scale-125"
-                    />
-                    <div className="relative flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <ProductImage
+                        src={p.imagemUrl}
+                        alt={p.nome}
+                        className="h-full w-full transition duration-500 group-hover:scale-105"
+                        rounded="none"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                      {p.destaque && (
+                        <span className="absolute right-3 top-3 rounded-full bg-gradient-to-br from-flame-400 to-rust-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-onyx-950 shadow-flame">
+                          Top
+                        </span>
+                      )}
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-onyx-900/80 to-transparent"
+                      />
+                    </div>
+                    <div className="relative flex flex-1 flex-col gap-3 p-5">
+                      <div>
                         <h3 className="font-display text-xl font-bold text-ivory-50">
                           {p.nome}
                         </h3>
@@ -97,19 +112,14 @@ export default async function CardapioPage() {
                           </p>
                         )}
                       </div>
-                      {p.destaque && (
-                        <span className="shrink-0 rounded-full bg-gradient-to-br from-flame-400 to-rust-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-onyx-950 shadow-flame">
-                          Top
+                      <div className="mt-auto flex items-end justify-between">
+                        <span className="font-display text-2xl font-bold text-gradient-flame">
+                          {formatBRL(p.preco)}
                         </span>
-                      )}
-                    </div>
-                    <div className="relative mt-5 flex items-end justify-between">
-                      <span className="font-display text-2xl font-bold text-gradient-flame">
-                        {formatBRL(p.preco)}
-                      </span>
-                      <span className="text-[11px] uppercase tracking-wider text-onyx-400">
-                        por {p.unidadeMedida}
-                      </span>
+                        <span className="text-[11px] uppercase tracking-wider text-onyx-400">
+                          por {p.unidadeMedida}
+                        </span>
+                      </div>
                     </div>
                   </article>
                 ))}

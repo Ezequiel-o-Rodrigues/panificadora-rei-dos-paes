@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, Badge, Input, Select, type Column } from "@/components/admin";
+import { ProductImage } from "@/components/shared/ProductImage";
 import { formatBRL } from "@/lib/money";
 import { toast } from "sonner";
 import {
@@ -90,6 +91,20 @@ export function ProductsTable({ produtos, categorias }: ProductsTableProps) {
   };
 
   const columns: Column<ProdutoComCategoria>[] = [
+    {
+      key: "imagem",
+      header: "",
+      className: "w-16",
+      render: (row) => (
+        <ProductImage
+          src={row.imagemUrl}
+          alt={row.nome}
+          className="h-12 w-12"
+          rounded="lg"
+          sizes="48px"
+        />
+      ),
+    },
     {
       key: "nome",
       header: "Nome",

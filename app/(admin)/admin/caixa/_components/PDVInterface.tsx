@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { Badge, Button, ConfirmDialog, Select } from "@/components/admin";
+import { ProductImage } from "@/components/shared/ProductImage";
 import { formatBRL } from "@/lib/money";
 import { formatTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -340,7 +341,7 @@ export function PDVInterface({
                 Nenhum produto disponível.
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                 {produtosFiltrados.map((p) => {
                   const estoque = Number(p.estoqueAtual);
                   const estoqueMin = Number(p.estoqueMinimo);
@@ -353,35 +354,47 @@ export function PDVInterface({
                       onClick={() => handleSelecionarProduto(p)}
                       disabled={semEstoque || !comandaAtiva || isPending}
                       className={cn(
-                        "group flex min-h-[7.5rem] flex-col items-start gap-1 rounded-xl border border-onyx-700 bg-onyx-800/60 p-3 text-left transition",
-                        "hover:border-flame-500/50 hover:bg-onyx-800 active:scale-[0.98]",
-                        "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-onyx-700",
+                        "group relative flex flex-col overflow-hidden rounded-2xl border border-onyx-700 bg-onyx-800/60 text-left transition",
+                        "hover:border-flame-500/60 hover:bg-onyx-800 hover:shadow-lg hover:shadow-flame-500/10 active:scale-[0.98]",
+                        "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-onyx-700 disabled:hover:shadow-none",
                       )}
                     >
-                      <div className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-ivory-50">
-                        {p.nome}
+                      <div className="relative aspect-square w-full">
+                        <ProductImage
+                          src={p.imagemUrl}
+                          alt={p.nome}
+                          className="h-full w-full"
+                          rounded="none"
+                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
+                        />
+                        {semEstoque && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                            <span className="flex items-center gap-1 rounded-full bg-rust-500/20 px-3 py-1 text-[11px] font-semibold text-rust-300 border border-rust-500/40">
+                              <AlertTriangle className="h-3 w-3" />
+                              Sem estoque
+                            </span>
+                          </div>
+                        )}
+                        {!semEstoque && estoqueBaixo && (
+                          <div className="absolute right-2 top-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/40 backdrop-blur-sm">
+                            Baixo
+                          </div>
+                        )}
                       </div>
-                      <div className="text-base font-bold text-flame-400">
-                        {formatBRL(p.preco)}
-                      </div>
-                      <div className="flex w-full items-center justify-between">
-                        <span className="truncate text-[10px] text-onyx-400">
-                          {p.categoria.nome}
-                        </span>
-                        {semEstoque ? (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-rust-400">
-                            <AlertTriangle className="h-3 w-3" />
-                            Sem estoque
-                          </span>
-                        ) : estoqueBaixo ? (
-                          <span className="text-[10px] font-semibold text-amber-400">
-                            Estoque baixo
-                          </span>
-                        ) : mostrarEstoque ? (
-                          <span className="text-[10px] text-onyx-500">
-                            {estoque.toFixed(2)} {p.unidadeMedida}
-                          </span>
-                        ) : null}
+                      <div className="flex flex-1 flex-col gap-1 p-3">
+                        <div className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-ivory-50">
+                          {p.nome}
+                        </div>
+                        <div className="mt-auto flex items-end justify-between gap-2">
+                          <div className="text-base font-bold text-flame-400">
+                            {formatBRL(p.preco)}
+                          </div>
+                          {!semEstoque && mostrarEstoque && (
+                            <span className="shrink-0 text-[10px] text-onyx-500">
+                              {estoque.toFixed(2)} {p.unidadeMedida}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );

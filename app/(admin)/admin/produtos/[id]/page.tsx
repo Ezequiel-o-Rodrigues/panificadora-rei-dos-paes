@@ -43,6 +43,7 @@ export default async function EditProdutoPage({ params }: EditProdutoPageProps) 
       <div className="rounded-2xl border border-onyx-800/70 bg-onyx-900/60 p-6 backdrop-blur-sm">
         <ProductForm
           categorias={categorias}
+          imagemUrl={produto.imagemUrl}
           defaultValues={{
             nome: produto.nome,
             categoriaId: produto.categoriaId,

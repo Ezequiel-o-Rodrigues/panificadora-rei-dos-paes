@@ -1,0 +1,5 @@
+*
+!.gitignore
+!produtos
+produtos/*
+!produtos/.gitkeep

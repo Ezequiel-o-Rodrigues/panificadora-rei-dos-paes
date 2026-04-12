@@ -4,29 +4,32 @@ import { db } from "@/db";
 import { produtos } from "@/db/schema";
 import { produtoSchema } from "@/lib/validators/produto";
 import { slugify } from "@/lib/slugify";
+import { saveProductImage, deleteProductImage } from "@/lib/upload";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: boolean; error?: string };
 
+function parseRaw(formData: FormData) {
+  return {
+    nome: formData.get("nome"),
+    categoriaId: formData.get("categoriaId"),
+    descricao: formData.get("descricao") || undefined,
+    preco: formData.get("preco"),
+    estoqueMinimo: formData.get("estoqueMinimo") || "0",
+    unidadeMedida: formData.get("unidadeMedida"),
+    pesoGramas: formData.get("pesoGramas") || undefined,
+    disponivelHoje: formData.get("disponivelHoje") === "true",
+    destaque: formData.get("destaque") === "true",
+    ativo: formData.get("ativo") === "true",
+  };
+}
+
 export async function createProduto(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    const raw = {
-      nome: formData.get("nome"),
-      categoriaId: formData.get("categoriaId"),
-      descricao: formData.get("descricao") || undefined,
-      preco: formData.get("preco"),
-      estoqueMinimo: formData.get("estoqueMinimo") || "0",
-      unidadeMedida: formData.get("unidadeMedida"),
-      pesoGramas: formData.get("pesoGramas") || undefined,
-      disponivelHoje: formData.get("disponivelHoje") === "true",
-      destaque: formData.get("destaque") === "true",
-      ativo: formData.get("ativo") === "true",
-    };
-
-    const parsed = produtoSchema.safeParse(raw);
+    const parsed = produtoSchema.safeParse(parseRaw(formData));
 
     if (!parsed.success) {
       const firstError = parsed.error.issues[0];
@@ -35,6 +38,13 @@ export async function createProduto(
 
     const data = parsed.data;
     const slug = slugify(data.nome);
+
+    let imagemUrl: string | null = null;
+    const imagemFile = formData.get("imagem");
+    if (imagemFile instanceof File && imagemFile.size > 0) {
+      const uploaded = await saveProductImage(imagemFile);
+      imagemUrl = uploaded?.url ?? null;
+    }
 
     await db.insert(produtos).values({
       nome: data.nome,
@@ -45,12 +55,14 @@ export async function createProduto(
       estoqueMinimo: data.estoqueMinimo ?? "0",
       unidadeMedida: data.unidadeMedida,
       pesoGramas: data.pesoGramas ?? null,
+      imagemUrl,
       disponivelHoje: data.disponivelHoje,
       destaque: data.destaque,
       ativo: data.ativo,
     });
 
     revalidatePath("/admin/produtos");
+    revalidatePath("/cardapio");
     return { success: true };
   } catch (error) {
     if (
@@ -62,6 +74,9 @@ export async function createProduto(
         error: "Já existe um produto com esse nome.",
       };
     }
+    if (error instanceof Error && error.message.includes("imagem")) {
+      return { success: false, error: error.message };
+    }
     console.error("Erro ao criar produto:", error);
     return { success: false, error: "Erro ao criar produto." };
   }
@@ -72,20 +87,7 @@ export async function updateProduto(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    const raw = {
-      nome: formData.get("nome"),
-      categoriaId: formData.get("categoriaId"),
-      descricao: formData.get("descricao") || undefined,
-      preco: formData.get("preco"),
-      estoqueMinimo: formData.get("estoqueMinimo") || "0",
-      unidadeMedida: formData.get("unidadeMedida"),
-      pesoGramas: formData.get("pesoGramas") || undefined,
-      disponivelHoje: formData.get("disponivelHoje") === "true",
-      destaque: formData.get("destaque") === "true",
-      ativo: formData.get("ativo") === "true",
-    };
-
-    const parsed = produtoSchema.safeParse(raw);
+    const parsed = produtoSchema.safeParse(parseRaw(formData));
 
     if (!parsed.success) {
       const firstError = parsed.error.issues[0];
@@ -94,6 +96,31 @@ export async function updateProduto(
 
     const data = parsed.data;
     const slug = slugify(data.nome);
+
+    const produtoAtual = await db.query.produtos.findFirst({
+      where: eq(produtos.id, id),
+      columns: { imagemUrl: true },
+    });
+
+    const removerImagem = formData.get("removerImagem") === "true";
+    const imagemFile = formData.get("imagem");
+    const temNovaImagem =
+      imagemFile instanceof File && imagemFile.size > 0;
+
+    let imagemUrl: string | null | undefined = undefined;
+
+    if (temNovaImagem) {
+      const uploaded = await saveProductImage(imagemFile as File);
+      imagemUrl = uploaded?.url ?? null;
+      if (produtoAtual?.imagemUrl) {
+        await deleteProductImage(produtoAtual.imagemUrl);
+      }
+    } else if (removerImagem) {
+      imagemUrl = null;
+      if (produtoAtual?.imagemUrl) {
+        await deleteProductImage(produtoAtual.imagemUrl);
+      }
+    }
 
     await db
       .update(produtos)
@@ -106,6 +133,7 @@ export async function updateProduto(
         estoqueMinimo: data.estoqueMinimo ?? "0",
         unidadeMedida: data.unidadeMedida,
         pesoGramas: data.pesoGramas ?? null,
+        ...(imagemUrl !== undefined ? { imagemUrl } : {}),
         disponivelHoje: data.disponivelHoje,
         destaque: data.destaque,
         ativo: data.ativo,
@@ -114,6 +142,8 @@ export async function updateProduto(
       .where(eq(produtos.id, id));
 
     revalidatePath("/admin/produtos");
+    revalidatePath(`/admin/produtos/${id}`);
+    revalidatePath("/cardapio");
     return { success: true };
   } catch (error) {
     if (
@@ -124,6 +154,9 @@ export async function updateProduto(
         success: false,
         error: "Já existe um produto com esse nome.",
       };
+    }
+    if (error instanceof Error && error.message.includes("imagem")) {
+      return { success: false, error: error.message };
     }
     console.error("Erro ao atualizar produto:", error);
     return { success: false, error: "Erro ao atualizar produto." };
