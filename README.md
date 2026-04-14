@@ -39,8 +39,8 @@ Enquanto você lê isso, dentro da sua padaria está acontecendo:
 | ✅ É pra você se... | ❌ Não é pra você se... |
 |---|---|
 | Você é dono e quer **enxergar o dinheiro** entrando e saindo | Você quer continuar no caderninho |
-| Sua padaria fatura entre **R$30k e R$500k/mês** | Você acha que perda de R$1.000/mês é "normal" |
-| Você já perdeu funcionário desonesto e **não quer perder de novo** | Você não tem celular |
+| Você quer ver sua padaria faturar cada vez mais | Você acha que perda de R$1.000/mês é "normal" |
+| Você já perdeu para funcionário desonesto e **não quer perder de novo** | Você não tem celular |
 | Quer um **cardápio digital bonito** pra disputar com o concorrente | Você ainda usa máquina de escrever |
 | Tem ambição de **abrir uma segunda unidade** | Já decidiu fechar |
 
@@ -52,7 +52,7 @@ Tudo o que está nesta tabela **já está rodando, no ar, em produção, hoje**.
 
 | # | Arma | O que isso significa pro seu bolso |
 |---|------|------------------------------------|
-| 1 | **PDV (Caixa) com baixa automática de estoque** | Vendeu 1 pão? O sistema tira do estoque. Sem caderninho. Sem "depois eu lanço". Sem 8 atendentes anotando errado. |
+| 1 | **PDV (Caixa) com baixa automática de estoque** | Vendeu 1 pão? O sistema tira do estoque. Sem caderninho. Sem "depois eu lanço". Sem anotações erradas. |
 | 2 | **6 formas de pagamento separadas** (Dinheiro, Débito, Crédito, PIX, Voucher, Outro) | No fechamento do dia você sabe exatamente quanto entrou em cada bandeira. Acabou aquela mistureba. |
 | 3 | **Fechamento de caixa com diferença esperado vs informado** | O sistema te mostra **quanto era pra ter no caixa**. Se faltar R$30, você sabe na hora. **Acabou desvio invisível.** |
 | 4 | **Inventário físico que detecta perda automaticamente** | Funcionário conta a prateleira, digita, e o sistema **cria o registro de perda em reais** se não bater. **O dinheiro que sumia agora tem nome, valor e data.** |
@@ -196,7 +196,7 @@ Use isso na reunião com o cliente. Cronometra.
 
 ## 💰 Conta de padeiro: o ROI
 
-Pra um padaria que fatura **R$60.000/mês**, vamos ser brutalmente realistas:
+Pra um padaria que fatura **R$40.000/mês**, vamos ser brutalmente realistas:
 
 | Vazamento típico | Quanto custa por mês |
 |------|------|
@@ -282,9 +282,8 @@ A única pergunta que sobra é **quanto tempo mais você vai pagar pelo problema
 
 📲 **Fale comigo agora:**
 
-- 💬 WhatsApp: *seu número aqui*
-- 📧 Email: *seu email aqui*
-- 📸 Instagram: [@reidospaes_1](https://www.instagram.com/reidospaes_1/)
+- 💬 WhatsApp: *64992070004*
+- 📧 Email: *ezequielrod2020@gmail.com*
 - 🌐 Demo ao vivo: [reidospaes.ezzedev.com.br](https://reidospaes.ezzedev.com.br)
 
 ---
