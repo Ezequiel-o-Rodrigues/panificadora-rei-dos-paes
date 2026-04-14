@@ -1,9 +1,16 @@
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
+import { del, put } from "@vercel/blob";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "produtos");
-const PUBLIC_PREFIX = "/uploads/produtos";
+const LOCAL_UPLOAD_DIR = path.join(
+  process.cwd(),
+  "public",
+  "uploads",
+  "produtos"
+);
+const LOCAL_PUBLIC_PREFIX = "/uploads/produtos";
+const BLOB_PATH_PREFIX = "produtos";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -36,8 +43,14 @@ function extFromMime(mime: string): string {
   }
 }
 
+function shouldUseBlob() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
 /**
- * Salva uma imagem de produto em public/uploads/produtos/ e retorna a URL pública.
+ * Salva uma imagem de produto.
+ * - Em produção (Vercel): usa Vercel Blob (requer BLOB_READ_WRITE_TOKEN).
+ * - Em dev sem token: grava em public/uploads/produtos/ localmente.
  * Retorna null se o file for vazio/ausente.
  * Lança Error em caso de tipo inválido ou tamanho excedido.
  */
@@ -56,34 +69,54 @@ export async function saveProductImage(
     throw new Error("Imagem muito grande. Tamanho máximo: 5MB.");
   }
 
-  await mkdir(UPLOAD_DIR, { recursive: true });
-
   const ext = extFromMime(file.type);
   const random = randomBytes(8).toString("hex");
   const filename = `${Date.now()}-${random}${ext}`;
-  const absPath = path.join(UPLOAD_DIR, filename);
 
+  if (shouldUseBlob()) {
+    const blob = await put(`${BLOB_PATH_PREFIX}/${filename}`, file, {
+      access: "public",
+      contentType: file.type,
+      addRandomSuffix: false,
+    });
+    return { url: blob.url, filename };
+  }
+
+  await mkdir(LOCAL_UPLOAD_DIR, { recursive: true });
+  const absPath = path.join(LOCAL_UPLOAD_DIR, filename);
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(absPath, buffer);
 
   return {
-    url: `${PUBLIC_PREFIX}/${filename}`,
+    url: `${LOCAL_PUBLIC_PREFIX}/${filename}`,
     filename,
   };
 }
 
 /**
- * Remove arquivo de imagem do disco se a URL for de upload local.
- * Silencioso em caso de erro (o arquivo pode já ter sido removido).
+ * Remove imagem de produto.
+ * Detecta automaticamente se a URL é Vercel Blob ou upload local.
+ * Silencioso em caso de erro (arquivo pode já ter sido removido).
  */
 export async function deleteProductImage(url: string | null | undefined) {
-  if (!url || !url.startsWith(PUBLIC_PREFIX)) return;
-  const filename = url.slice(PUBLIC_PREFIX.length + 1);
+  if (!url) return;
+
+  if (url.includes(".blob.vercel-storage.com")) {
+    try {
+      await del(url);
+    } catch {
+      // ignore — arquivo pode não existir
+    }
+    return;
+  }
+
+  if (!url.startsWith(LOCAL_PUBLIC_PREFIX)) return;
+  const filename = url.slice(LOCAL_PUBLIC_PREFIX.length + 1);
   if (!filename || filename.includes("/") || filename.includes("..")) return;
-  const absPath = path.join(UPLOAD_DIR, filename);
+  const absPath = path.join(LOCAL_UPLOAD_DIR, filename);
   try {
     await unlink(absPath);
   } catch {
-    // ignore — arquivo pode não existir
+    // ignore
   }
 }
