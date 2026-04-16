@@ -9,13 +9,15 @@ import {
   ArrowLeft,
   Lock,
   PackagePlus,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Receipt,
   Search,
   Trash2,
   X,
 } from "lucide-react";
-import { Badge, Button, ConfirmDialog, Select } from "@/components/admin";
+import { Badge, Button, ConfirmDialog, Select, useSidebar } from "@/components/admin";
 import { ProductImage } from "@/components/shared/ProductImage";
 import { formatBRL } from "@/lib/money";
 import { formatTime } from "@/lib/dates";
@@ -69,6 +71,7 @@ export function PDVInterface({
 }: PDVInterfaceProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { collapsed, toggle: toggleSidebar } = useSidebar();
 
   const [comandaAtivaId, setComandaAtivaId] = useState<number | null>(
     comandasAbertas[0]?.id ?? null,
@@ -236,6 +239,19 @@ export function PDVInterface({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            title={collapsed ? "Mostrar menu lateral" : "Ocultar menu lateral"}
+            className="hidden md:inline-flex"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
           <Link href="/admin/caixa">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4" />

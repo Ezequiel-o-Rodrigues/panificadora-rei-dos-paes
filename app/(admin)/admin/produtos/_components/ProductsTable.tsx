@@ -92,7 +92,13 @@ export function ProductsTable({ produtos, categorias }: ProductsTableProps) {
     startDelete(async () => {
       const result = await deleteProduto(deletingProduto.id);
       if (result.success) {
-        toast.success("Produto excluído!");
+        if (result.archived) {
+          toast.success(
+            "Produto desativado! Como possui histórico de vendas, foi arquivado em vez de excluído.",
+          );
+        } else {
+          toast.success("Produto excluído permanentemente!");
+        }
         setDeletingProduto(null);
         router.refresh();
       } else {

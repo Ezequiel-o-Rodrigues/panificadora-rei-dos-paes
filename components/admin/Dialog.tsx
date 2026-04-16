@@ -54,7 +54,7 @@ export function Dialog({
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-2xl border border-onyx-800/70 bg-onyx-900 p-6 shadow-2xl",
+          "relative z-10 w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border border-onyx-800/70 bg-onyx-900 p-6 shadow-2xl",
           "animate-in fade-in-0 zoom-in-95",
           className
         )}

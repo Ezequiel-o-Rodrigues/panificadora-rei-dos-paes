@@ -16,3 +16,5 @@ export { ConfirmDialog } from "./ConfirmDialog";
 export { DataTable } from "./DataTable";
 export type { Column } from "./DataTable";
 export { DateRangePicker } from "./DateRangePicker";
+export { SidebarProvider, useSidebar } from "./SidebarContext";
+export { AdminShell } from "./AdminShell";

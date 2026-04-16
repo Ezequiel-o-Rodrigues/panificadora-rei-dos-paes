@@ -8,7 +8,7 @@ import { saveProductImage, deleteProductImage } from "@/lib/upload";
 import { eq, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-type ActionResult = { success: boolean; error?: string };
+type ActionResult = { success: boolean; error?: string; archived?: boolean };
 
 function parseRaw(formData: FormData) {
   return {
@@ -231,18 +231,26 @@ export async function deleteProduto(
       .from(itensComanda)
       .where(eq(itensComanda.produtoId, id));
 
-    if (itensResult && itensResult.count > 0) {
-      return {
-        success: false,
-        error: `Não é possível excluir. Existem ${itensResult.count} item(ns) de comanda vinculado(s) a este produto.`,
-      };
+    const hasHistory = itensResult && itensResult.count > 0;
+
+    if (hasHistory) {
+      // Product has sales history — archive instead of deleting
+      // to preserve historical comanda/report data
+      await db
+        .update(produtos)
+        .set({ ativo: false, disponivelHoje: false, updatedAt: new Date() })
+        .where(eq(produtos.id, id));
+
+      revalidatePath("/admin/produtos");
+      revalidatePath("/admin/caixa");
+      revalidatePath("/cardapio");
+      return { success: true, archived: true };
     }
 
-    // Delete related stock movements and losses first
+    // No sales history — safe to delete permanently
     await db.delete(movimentacoesEstoque).where(eq(movimentacoesEstoque.produtoId, id));
     await db.delete(perdasEstoque).where(eq(perdasEstoque.produtoId, id));
 
-    // Delete product image if exists
     if (produto.imagemUrl) {
       await deleteProductImage(produto.imagemUrl);
     }
