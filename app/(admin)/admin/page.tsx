@@ -2,6 +2,7 @@ import { AlertTriangle, Package, ShoppingCart, TrendingUp } from "lucide-react";
 import { PageHeader, StatCard } from "@/components/admin";
 import { formatBRL } from "@/lib/money";
 import { requireUser } from "@/lib/session";
+import { TENANT_CONFIG, segmentoSubstantivo } from "@/lib/config/tenant";
 import { MonthlySalesChart } from "./_components/MonthlySalesChart";
 import { RecentOrdersList } from "./_components/RecentOrdersList";
 import { SalesChart } from "./_components/SalesChart";
@@ -56,7 +57,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <PageHeader
         title="Dashboard"
-        description="Visão geral da sua panificadora"
+        description={`Visão geral da sua ${segmentoSubstantivo(TENANT_CONFIG.segmento)}`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Button,
@@ -10,8 +9,11 @@ import {
   Input,
   Select,
 } from "@/components/admin";
+import { ComprovantePreview } from "@/components/pagamento/ComprovantePreview";
+import { PixQrCode } from "@/components/pagamento/PixQrCode";
 import { formatBRL } from "@/lib/money";
-import { finalizarComanda } from "../_actions";
+import { isFeatureEnabled } from "@/lib/features";
+import { finalizarComanda, iniciarPagamentoPix } from "../_actions";
 import type { ConfigGorjeta } from "../_queries";
 
 interface FinalizarComandaDialogProps {
@@ -21,6 +23,14 @@ interface FinalizarComandaDialogProps {
   subtotal: number;
   configGorjeta: ConfigGorjeta;
 }
+
+type PixState = {
+  pagamentoId: number;
+  qrCode: string;
+  qrCodeBase64: string;
+  valor: number;
+  expiresAt: string;
+};
 
 const FORMA_PAGAMENTO_OPTIONS = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -38,7 +48,6 @@ export function FinalizarComandaDialog({
   subtotal,
   configGorjeta,
 }: FinalizarComandaDialogProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const defaultPercent = configGorjeta.tipo === "percentual" ? configGorjeta.taxa : "0";
@@ -50,6 +59,10 @@ export function FinalizarComandaDialog({
   const [gorjetaMode, setGorjetaMode] = useState<"percentual" | "valor">(
     configGorjeta.tipo === "fixa" ? "valor" : "percentual",
   );
+  const [comprovanteConteudo, setComprovanteConteudo] = useState<string | null>(
+    null,
+  );
+  const [pixState, setPixState] = useState<PixState | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -57,6 +70,8 @@ export function FinalizarComandaDialog({
       setGorjetaPercent(defaultPercent);
       setGorjetaValor(defaultFixa);
       setGorjetaMode(configGorjeta.tipo === "fixa" ? "valor" : "percentual");
+      setComprovanteConteudo(null);
+      setPixState(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -73,40 +88,96 @@ export function FinalizarComandaDialog({
 
   const total = subtotal + gorjetaCalculada;
 
+  const pixEnabled = isFeatureEnabled("mercadopago_pix");
+  const usarFluxoPix = pixEnabled && formaPagamento === "pix";
+
+  function buildTaxaGorjeta(): string {
+    return gorjetaMode === "percentual"
+      ? gorjetaPercent || "0"
+      : gorjetaCalculada.toFixed(2);
+  }
+
   function handleConfirm() {
     if (subtotal <= 0) {
       toast.error("Comanda vazia");
       return;
     }
 
+    if (usarFluxoPix) {
+      startTransition(async () => {
+        const formData = new FormData();
+        formData.set("taxaGorjeta", buildTaxaGorjeta());
+        const result = await iniciarPagamentoPix(comandaId, formData);
+        if (result.success && result.data) {
+          setPixState({
+            pagamentoId: result.data.pagamentoId,
+            qrCode: result.data.qrCode,
+            qrCodeBase64: result.data.qrCodeBase64,
+            valor: result.data.valor,
+            expiresAt: result.data.expiresAt,
+          });
+        } else {
+          toast.error(result.error ?? "Erro ao gerar QR Code Pix");
+        }
+      });
+      return;
+    }
+
     startTransition(async () => {
       const formData = new FormData();
       formData.set("formaPagamento", formaPagamento);
-      // Enviamos o valor em R$ já calculado. O server trata:
-      //  - se a config for "fixa", sobrescreve com o valor configurado
-      //  - caso contrário usa este valor como percentual (se <=100) ou R$ (>100)
-      // Enviamos como R$ direto (maior que 100 força tratamento como valor).
-      // Para evitar ambiguidade usamos o fato de que, como aqui o cliente
-      // enviou como taxaGorjeta já calculada, o server chamará
-      // calcGorjetaPercentual(subtotal, taxa) — então enviamos o percentual
-      // equivalente se estivermos no modo percentual; se estivermos no modo
-      // valor, enviamos o próprio valor (pode ser > 100 ou <= 100 e o server
-      // trata).
-      const taxaParaEnviar =
-        gorjetaMode === "percentual"
-          ? gorjetaPercent || "0"
-          : gorjetaCalculada.toFixed(2);
-      formData.set("taxaGorjeta", taxaParaEnviar);
+      formData.set("taxaGorjeta", buildTaxaGorjeta());
 
       const result = await finalizarComanda(comandaId, formData);
       if (result.success) {
         toast.success("Comanda finalizada!");
-        onOpenChange(false);
-        router.refresh();
+        if (result.data?.conteudo) {
+          setComprovanteConteudo(result.data.conteudo);
+        } else {
+          onOpenChange(false);
+        }
       } else {
         toast.error(result.error ?? "Erro ao finalizar comanda");
       }
     });
+  }
+
+  if (comprovanteConteudo) {
+    return (
+      <ComprovantePreview
+        open={open}
+        onOpenChange={onOpenChange}
+        conteudo={comprovanteConteudo}
+        onClose={() => setComprovanteConteudo(null)}
+      />
+    );
+  }
+
+  if (pixState) {
+    return (
+      <Dialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Pagamento via Pix"
+        description="Escaneie o QR Code ou copie o código para pagar"
+      >
+        <PixQrCode
+          pagamentoId={pixState.pagamentoId}
+          qrCode={pixState.qrCode}
+          qrCodeBase64={pixState.qrCodeBase64}
+          valor={pixState.valor}
+          expiresAt={pixState.expiresAt}
+          onApproved={(conteudo) => {
+            setPixState(null);
+            setComprovanteConteudo(conteudo);
+            toast.success("Pagamento Pix aprovado!");
+          }}
+          onCancel={() => {
+            setPixState(null);
+          }}
+        />
+      </Dialog>
+    );
   }
 
   return (
@@ -212,7 +283,7 @@ export function FinalizarComandaDialog({
           Cancelar
         </Button>
         <Button onClick={handleConfirm} loading={isPending} size="lg">
-          Confirmar Venda
+          {usarFluxoPix ? "Gerar QR Code Pix" : "Confirmar Venda"}
         </Button>
       </DialogFooter>
     </Dialog>

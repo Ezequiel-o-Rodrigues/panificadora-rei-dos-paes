@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/admin";
 import { requireUser } from "@/lib/session";
+import { TENANT_CONFIG, segmentoSubstantivo } from "@/lib/config/tenant";
 
 interface ReportCard {
   href: string;
@@ -54,7 +55,7 @@ export default async function RelatoriosHubPage() {
     <div className="space-y-6">
       <PageHeader
         title="Relatórios"
-        description="Inteligência de negócio da panificadora: vendas, produtos, estoque e desempenho."
+        description={`Inteligência de negócio da ${segmentoSubstantivo(TENANT_CONFIG.segmento)}: vendas, produtos, estoque e desempenho.`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">

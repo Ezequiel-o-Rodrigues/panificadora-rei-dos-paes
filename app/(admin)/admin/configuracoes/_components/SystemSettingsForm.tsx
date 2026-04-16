@@ -11,11 +11,11 @@ interface SystemSettingsFormProps {
 }
 
 const fields = [
-  { key: "nome_empresa", label: "Nome da empresa", placeholder: "Panificadora Rei dos Pães" },
+  { key: "nome_empresa", label: "Nome da empresa", placeholder: "Nome do estabelecimento" },
   { key: "endereco", label: "Endereço", placeholder: "Rua Exemplo, 123 - Cidade/UF" },
   { key: "telefone", label: "Telefone", placeholder: "(11) 1234-5678" },
   { key: "whatsapp", label: "WhatsApp", placeholder: "(11) 91234-5678" },
-  { key: "instagram", label: "Instagram", placeholder: "@panificadora" },
+  { key: "instagram", label: "Instagram", placeholder: "@seuestabelecimento" },
   { key: "horario_funcionamento", label: "Horário de funcionamento", placeholder: "Seg-Sáb: 06h-20h | Dom: 06h-13h" },
 ] as const;
 

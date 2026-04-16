@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { ArrowRight, Clock, Flame, MapPin } from "lucide-react";
 import { InstagramIcon } from "@/components/shared/icons";
+import { TENANT_CONFIG } from "@/lib/config/tenant";
 
 export default function HomePage() {
+  const instagramHandle = TENANT_CONFIG.contato.instagram;
+  const instagramUrl = instagramHandle
+    ? `https://www.instagram.com/${instagramHandle.replace(/^@/, "")}/`
+    : null;
   return (
     <>
       <section className="relative overflow-hidden">
@@ -32,7 +37,7 @@ export default function HomePage() {
             <p className="mt-6 max-w-lg text-base leading-relaxed text-onyx-200 sm:text-lg">
               Pães artesanais, bolos caseiros, doces finos e salgados
               irresistíveis. Na{" "}
-              <strong className="text-flame-400">Panificadora Rei dos Pães</strong>,
+              <strong className="text-flame-400">{TENANT_CONFIG.nome}</strong>,
               cada mordida é uma tradição que atravessa gerações.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -43,15 +48,17 @@ export default function HomePage() {
                 Ver cardápio
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
               </Link>
-              <a
-                href="https://www.instagram.com/reidospaes_1/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-onyx-900/60 px-6 py-3.5 text-sm font-semibold text-ivory-50 backdrop-blur transition hover:border-flame-500 hover:bg-onyx-800"
-              >
-                <InstagramIcon className="h-4 w-4" />
-                @reidospaes_1
-              </a>
+              {instagramUrl && (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-onyx-900/60 px-6 py-3.5 text-sm font-semibold text-ivory-50 backdrop-blur transition hover:border-flame-500 hover:bg-onyx-800"
+                >
+                  <InstagramIcon className="h-4 w-4" />
+                  {instagramHandle}
+                </a>
+              )}
             </div>
             <div className="mt-10 grid grid-cols-2 gap-4 text-sm sm:max-w-md">
               <div className="flex items-start gap-3">

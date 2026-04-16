@@ -20,6 +20,11 @@ export const unidadeMedidaEnum = pgEnum("unidade_medida", [
   "g",
   "fatia",
   "pacote",
+  "porcao",
+  "litro",
+  "ml",
+  "metro",
+  "combo",
 ]);
 export const statusComandaEnum = pgEnum("status_comanda", [
   "aberta",
@@ -250,6 +255,29 @@ export const comprovantesVenda = pgTable("comprovantes_venda", {
     .defaultNow(),
 });
 
+export const pagamentosPix = pgTable("pagamentos_pix", {
+  id: serial("id").primaryKey(),
+  comandaId: integer("comanda_id")
+    .notNull()
+    .references(() => comandas.id, { onDelete: "cascade" }),
+  mpPaymentId: text("mp_payment_id").notNull().unique(),
+  qrCode: text("qr_code").notNull(),
+  qrCodeBase64: text("qr_code_base64").notNull(),
+  valor: numeric("valor", { precision: 10, scale: 2 }).notNull(),
+  taxaGorjetaSnapshot: numeric("taxa_gorjeta_snapshot", {
+    precision: 10,
+    scale: 2,
+  })
+    .notNull()
+    .default("0"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+});
+
 export const configuracoesSistema = pgTable(
   "configuracoes_sistema",
   {
@@ -351,6 +379,13 @@ export const perdasEstoqueRelations = relations(perdasEstoque, ({ one }) => ({
   }),
 }));
 
+export const pagamentosPixRelations = relations(pagamentosPix, ({ one }) => ({
+  comanda: one(comandas, {
+    fields: [pagamentosPix.comandaId],
+    references: [comandas.id],
+  }),
+}));
+
 export const caixaSessoesRelations = relations(caixaSessoes, ({ one, many }) => ({
   usuarioAbertura: one(usuarios, {
     fields: [caixaSessoes.usuarioAberturaId],
@@ -379,3 +414,5 @@ export type MovimentacaoEstoque = typeof movimentacoesEstoque.$inferSelect;
 export type NovaMovimentacaoEstoque = typeof movimentacoesEstoque.$inferInsert;
 export type CaixaSessao = typeof caixaSessoes.$inferSelect;
 export type NovaCaixaSessao = typeof caixaSessoes.$inferInsert;
+export type PagamentoPix = typeof pagamentosPix.$inferSelect;
+export type NovoPagamentoPix = typeof pagamentosPix.$inferInsert;

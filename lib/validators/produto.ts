@@ -7,7 +7,20 @@ export const produtoSchema = z.object({
   preco: z.string().refine((v) => Number(v) > 0, "Preço deve ser maior que zero"),
   estoqueAtual: z.string().optional().default("0"),
   estoqueMinimo: z.string().optional().default("0"),
-  unidadeMedida: z.enum(["un", "kg", "g", "fatia", "pacote"]).default("un"),
+  unidadeMedida: z
+    .enum([
+      "un",
+      "kg",
+      "g",
+      "fatia",
+      "pacote",
+      "porcao",
+      "litro",
+      "ml",
+      "metro",
+      "combo",
+    ])
+    .default("un"),
   pesoGramas: z.coerce.number().int().positive().optional().nullable(),
   disponivelHoje: z.boolean().default(true),
   destaque: z.boolean().default(false),

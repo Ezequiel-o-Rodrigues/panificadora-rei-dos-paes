@@ -1,17 +1,20 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categorias, produtos } from "@/db/schema";
-import { formatBRL } from "@/lib/money";
-import { ProductImage } from "@/components/shared/ProductImage";
+import { isFeatureEnabled, getFeatureConfig } from "@/lib/features";
+import {
+  CardapioInterativo,
+  type CardapioCategoria,
+} from "./_components/CardapioInterativo";
 
 export const metadata = {
   title: "Cardápio",
-  description: "Conheça todos os pães, doces, salgados e bebidas da casa.",
+  description: "Conheça todos os itens disponíveis no nosso cardápio.",
 };
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
-async function getCardapio() {
+async function getCardapio(): Promise<CardapioCategoria[]> {
   try {
     const cats = await db.query.categorias.findMany({
       where: eq(categorias.ativo, true),
@@ -23,17 +26,58 @@ async function getCardapio() {
         },
       },
     });
-    return cats;
+    return cats.map((c) => ({
+      id: c.id,
+      nome: c.nome,
+      slug: c.slug,
+      descricao: c.descricao,
+      icone: c.icone,
+      produtos: c.produtos.map((p) => ({
+        id: p.id,
+        nome: p.nome,
+        slug: p.slug,
+        descricao: p.descricao,
+        preco: p.preco,
+        imagemUrl: p.imagemUrl,
+        unidadeMedida: p.unidadeMedida,
+        destaque: p.destaque,
+      })),
+    }));
   } catch {
     return [];
   }
 }
 
-export default async function CardapioPage() {
+interface CardapioPageProps {
+  searchParams: Promise<{ mesa?: string }>;
+}
+
+export default async function CardapioPage({ searchParams }: CardapioPageProps) {
+  const params = await searchParams;
   const cats = await getCardapio();
+  const whatsappEnabled = isFeatureEnabled("whatsapp_orders");
+  const whatsappConfig = getFeatureConfig("whatsapp_orders");
+  const qrMesaEnabled = isFeatureEnabled("cardapio_qr_mesa");
+
+  const mesaRaw = params.mesa?.trim();
+  const mesaNumero =
+    qrMesaEnabled && mesaRaw && /^\d+$/.test(mesaRaw)
+      ? Number(mesaRaw)
+      : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-12 sm:px-6">
+      {mesaNumero !== null && (
+        <div className="mb-6 rounded-2xl border border-flame-500/40 bg-flame-500/10 px-5 py-4 text-center backdrop-blur">
+          <p className="text-xs uppercase tracking-[0.2em] text-flame-300">
+            Você está na
+          </p>
+          <p className="mt-1 font-display text-2xl font-bold text-flame-400">
+            Mesa {mesaNumero}
+          </p>
+        </div>
+      )}
+
       <header className="mb-12 text-center">
         <span className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-flame-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-flame-300 backdrop-blur">
           Nosso cardápio
@@ -42,8 +86,9 @@ export default async function CardapioPage() {
           Fresquinho, <span className="text-gradient-flame">todo dia</span>.
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-sm text-onyx-200 sm:text-base">
-          Produzimos tudo aqui mesmo, com ingredientes selecionados e receitas
-          de família. Escolha seus preferidos e venha buscar no balcão.
+          Produzimos tudo aqui mesmo, com ingredientes selecionados. Escolha
+          seus preferidos e venha buscar no balcão
+          {whatsappEnabled ? " ou peça pelo WhatsApp" : ""}.
         </p>
       </header>
 
@@ -57,76 +102,12 @@ export default async function CardapioPage() {
           </code>
         </div>
       ) : (
-        <div className="space-y-16">
-          {cats.map((cat) => (
-            <section key={cat.id} id={cat.slug}>
-              <div className="mb-6 flex items-end justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-3xl font-bold text-ivory-50 sm:text-4xl">
-                    {cat.icone && (
-                      <span className="mr-3 text-2xl">{cat.icone}</span>
-                    )}
-                    {cat.nome}
-                  </h2>
-                  {cat.descricao && (
-                    <p className="mt-1 text-sm text-onyx-300">{cat.descricao}</p>
-                  )}
-                </div>
-                <span className="text-xs uppercase tracking-wider text-onyx-400">
-                  {cat.produtos.length}{" "}
-                  {cat.produtos.length === 1 ? "item" : "itens"}
-                </span>
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {cat.produtos.map((p) => (
-                  <article
-                    key={p.id}
-                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-onyx-700/80 bg-onyx-900/60 backdrop-blur-sm transition hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame"
-                  >
-                    <div className="relative aspect-[4/3] w-full overflow-hidden">
-                      <ProductImage
-                        src={p.imagemUrl}
-                        alt={p.nome}
-                        className="h-full w-full transition duration-500 group-hover:scale-105"
-                        rounded="none"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      />
-                      {p.destaque && (
-                        <span className="absolute right-3 top-3 rounded-full bg-gradient-to-br from-flame-400 to-rust-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-onyx-950 shadow-flame">
-                          Top
-                        </span>
-                      )}
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-onyx-900/80 to-transparent"
-                      />
-                    </div>
-                    <div className="relative flex flex-1 flex-col gap-3 p-5">
-                      <div>
-                        <h3 className="font-display text-xl font-bold text-ivory-50">
-                          {p.nome}
-                        </h3>
-                        {p.descricao && (
-                          <p className="mt-1 line-clamp-2 text-xs text-onyx-300">
-                            {p.descricao}
-                          </p>
-                        )}
-                      </div>
-                      <div className="mt-auto flex items-end justify-between">
-                        <span className="font-display text-2xl font-bold text-gradient-flame">
-                          {formatBRL(p.preco)}
-                        </span>
-                        <span className="text-[11px] uppercase tracking-wider text-onyx-400">
-                          por {p.unidadeMedida}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <CardapioInterativo
+          categorias={cats}
+          whatsappEnabled={whatsappEnabled}
+          whatsappNumero={whatsappConfig?.numero}
+          mesa={mesaNumero}
+        />
       )}
     </div>
   );

@@ -20,6 +20,11 @@ const UNIDADE_OPTIONS = [
   { value: "g", label: "Grama" },
   { value: "fatia", label: "Fatia" },
   { value: "pacote", label: "Pacote" },
+  { value: "porcao", label: "Porção" },
+  { value: "litro", label: "Litro" },
+  { value: "ml", label: "Mililitro" },
+  { value: "metro", label: "Metro" },
+  { value: "combo", label: "Combo" },
 ];
 
 interface ProductFormProps {

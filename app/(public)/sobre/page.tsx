@@ -1,3 +1,5 @@
+import { TENANT_CONFIG } from "@/lib/config/tenant";
+
 export const metadata = { title: "Sobre" };
 
 export default function SobrePage() {
@@ -7,8 +9,8 @@ export default function SobrePage() {
         Nossa <span className="text-gradient-flame">história</span>
       </h1>
       <p className="mt-6 text-lg text-onyx-200">
-        A Panificadora Rei dos Pães nasceu do sonho de levar pão fresco e de
-        qualidade para o bairro. Em breve contaremos toda a história por aqui.
+        A {TENANT_CONFIG.nome} nasceu do sonho de atender o bairro com qualidade
+        e atenção aos detalhes. Em breve contaremos toda a história por aqui.
       </p>
     </div>
   );

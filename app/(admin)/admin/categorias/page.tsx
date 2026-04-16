@@ -18,7 +18,7 @@ export default async function CategoriasPage() {
     <div className="space-y-6">
       <PageHeader
         title="Categorias"
-        description="Gerencie as categorias de produtos da panificadora."
+        description="Gerencie as categorias de produtos do estabelecimento."
       >
         <NewCategoriaButton />
       </PageHeader>

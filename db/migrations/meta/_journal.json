@@ -8,6 +8,20 @@
       "when": 1775935040345,
       "tag": "0000_early_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776286431142,
+      "tag": "0001_lyrical_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776288345588,
+      "tag": "0002_loud_songbird",
+      "breakpoints": true
     }
   ]
 }

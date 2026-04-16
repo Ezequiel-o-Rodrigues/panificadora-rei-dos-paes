@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { TENANT_CONFIG } from "@/lib/config/tenant";
 
 type LogoProps = {
   className?: string;
@@ -23,8 +24,8 @@ export function Logo({
     <div className={cn("flex items-center gap-3", className)}>
       {HAS_LOGO_FILE ? (
         <Image
-          src="/images/logo.png"
-          alt="Panificadora Rei dos Pães"
+          src={TENANT_CONFIG.logoUrl}
+          alt={TENANT_CONFIG.nome}
           width={size}
           height={size}
           priority
@@ -36,11 +37,11 @@ export function Logo({
       {!compact && (
         <div className="flex flex-col leading-tight">
           <span className="font-display text-lg font-bold uppercase tracking-wide text-ivory-50">
-            Rei dos <span className="text-flame-500">Pães</span>
+            {TENANT_CONFIG.nome}
           </span>
           {!hideSubtitle && (
             <span className="text-[9px] font-medium uppercase tracking-[0.3em] text-onyx-300">
-              Panificadora & Confeitaria
+              {TENANT_CONFIG.subtitulo}
             </span>
           )}
         </div>

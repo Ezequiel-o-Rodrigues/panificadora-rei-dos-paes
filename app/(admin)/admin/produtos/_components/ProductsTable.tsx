@@ -21,6 +21,11 @@ const UNIDADE_LABELS: Record<string, string> = {
   g: "Grama",
   fatia: "Fatia",
   pacote: "Pacote",
+  porcao: "Porção",
+  litro: "Litro",
+  ml: "Mililitro",
+  metro: "Metro",
+  combo: "Combo",
 };
 
 interface ProductsTableProps {

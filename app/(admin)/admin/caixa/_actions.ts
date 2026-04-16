@@ -4,22 +4,21 @@ import { db } from "@/db";
 import {
   caixaSessoes,
   comandas,
-  comprovantesVenda,
   itensComanda,
   itensLivres,
-  movimentacoesEstoque,
+  pagamentosPix,
   produtos,
 } from "@/db/schema";
 import { requireUser } from "@/lib/session";
-import { formatBRL } from "@/lib/money";
-import { formatDateTime } from "@/lib/dates";
 import {
-  calcGorjetaPercentual,
   calcSubtotal,
-  calcTotalComanda,
   toMoney,
   toQty,
 } from "@/lib/calculations";
+import { finalizarComandaCore } from "@/lib/modules/comandas/finalizar-core";
+import { criarPagamentoPixParaComanda } from "@/lib/modules/mercadopago/create-pix";
+import { createMpClient } from "@/lib/modules/mercadopago/client";
+import { getFeatureConfig } from "@/lib/features";
 import {
   abrirCaixaSchema,
   fecharCaixaSchema,
@@ -42,15 +41,6 @@ export type ActionResult<T = unknown> = {
   success: boolean;
   error?: string;
   data?: T;
-};
-
-const FORMA_PAGAMENTO_LABELS: Record<string, string> = {
-  dinheiro: "Dinheiro",
-  debito: "Cartao Debito",
-  credito: "Cartao Credito",
-  pix: "PIX",
-  voucher: "Voucher",
-  outro: "Outro",
 };
 
 // ---------------------------------------------------------------------------
@@ -495,85 +485,7 @@ export async function removerItemLivre(
 }
 
 // ---------------------------------------------------------------------------
-// Comprovante (texto plano ESC/POS-friendly)
-// ---------------------------------------------------------------------------
-
-interface ComprovanteData {
-  numero: number;
-  dataFechamento: Date;
-  garcomNome: string | null;
-  sessaoId: number;
-  itensProduto: { nome: string; quantidade: string; subtotal: string }[];
-  itensLivres: { descricao: string; quantidade: string; subtotal: string }[];
-  subtotal: number;
-  gorjeta: number;
-  total: number;
-  formaPagamento: string;
-}
-
-function gerarConteudoComprovante(data: ComprovanteData): string {
-  const LARGURA = 32;
-  const dupla = "=".repeat(LARGURA);
-  const simples = "-".repeat(LARGURA);
-
-  const centro = (txt: string) => {
-    const padding = Math.max(0, Math.floor((LARGURA - txt.length) / 2));
-    return " ".repeat(padding) + txt;
-  };
-
-  const linhaValor = (label: string, valor: string) => {
-    const espaco = Math.max(1, LARGURA - label.length - valor.length);
-    return label + " ".repeat(espaco) + valor;
-  };
-
-  const lines: string[] = [];
-  lines.push(dupla);
-  lines.push(centro("PANIFICADORA REI DOS PAES"));
-  lines.push(dupla);
-  lines.push(`Comanda: #${data.numero}`);
-  lines.push(`Data: ${formatDateTime(data.dataFechamento)}`);
-  if (data.garcomNome) {
-    lines.push(`Garcom: ${data.garcomNome}`);
-  }
-  lines.push(`Caixa: #${data.sessaoId}`);
-  lines.push(simples);
-  lines.push("ITEM              QTD   SUBTOTAL");
-  lines.push(simples);
-
-  const fmtLinhaItem = (nome: string, qtd: string, sub: string) => {
-    const nomeCol = nome.substring(0, 16).padEnd(16, " ");
-    const qtdCol = Number(qtd).toFixed(2).padStart(5, " ");
-    const subCol = formatBRL(sub).padStart(9, " ");
-    return `${nomeCol} ${qtdCol}${subCol}`;
-  };
-
-  for (const item of data.itensProduto) {
-    lines.push(fmtLinhaItem(item.nome, item.quantidade, item.subtotal));
-  }
-  for (const item of data.itensLivres) {
-    lines.push(fmtLinhaItem(item.descricao, item.quantidade, item.subtotal));
-  }
-
-  lines.push(simples);
-  lines.push(linhaValor("Subtotal:", formatBRL(data.subtotal)));
-  if (data.gorjeta > 0) {
-    lines.push(linhaValor("Gorjeta:", formatBRL(data.gorjeta)));
-  }
-  lines.push(dupla);
-  lines.push(linhaValor("TOTAL:", formatBRL(data.total)));
-  lines.push(
-    `Pagamento: ${FORMA_PAGAMENTO_LABELS[data.formaPagamento] ?? data.formaPagamento}`,
-  );
-  lines.push(dupla);
-  lines.push(centro("Obrigado pela preferencia!"));
-  lines.push(dupla);
-  lines.push("");
-
-  return lines.join("\n");
-}
-
-// ---------------------------------------------------------------------------
-// Finalizar comanda — passo mais crítico (baixa de estoque + comprovante)
+// Finalizar comanda (delegada ao core reutilizável)
 // ---------------------------------------------------------------------------
 
 export async function finalizarComanda(
@@ -595,169 +507,170 @@ export async function finalizarComanda(
       };
     }
 
+    const cfg = await getConfigGorjeta();
+    const result = await finalizarComandaCore({
+      comandaId,
+      userId: Number(user.id),
+      formaPagamento: parsed.data.formaPagamento,
+      taxaGorjetaInput: parsed.data.taxaGorjeta,
+      gorjetaConfig: cfg,
+    });
+
+    if (!result.success) return result;
+
     const comanda = await db.query.comandas.findFirst({
       where: eq(comandas.id, comandaId),
-      with: {
-        garcom: true,
-        itens: { with: { produto: true } },
-        itensLivres: true,
+      columns: { caixaSessaoId: true },
+    });
+    if (comanda?.caixaSessaoId) {
+      revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
+    }
+    revalidatePath("/admin/caixa");
+    revalidatePath("/admin/comandas");
+    revalidatePath("/admin/estoque");
+    return result;
+  } catch (error) {
+    console.error("Erro ao finalizar comanda:", error);
+    return { success: false, error: "Erro ao finalizar comanda." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mercado Pago Pix (módulo opcional)
+// ---------------------------------------------------------------------------
+
+export async function iniciarPagamentoPix(
+  comandaId: number,
+  formData: FormData,
+): Promise<
+  ActionResult<{
+    pagamentoId: number;
+    mpPaymentId: string;
+    qrCode: string;
+    qrCodeBase64: string;
+    valor: number;
+    expiresAt: string;
+  }>
+> {
+  try {
+    await requireUser();
+
+    const taxaGorjetaInput = Number(formData.get("taxaGorjeta") ?? "0") || 0;
+    const cfgGorjeta = await getConfigGorjeta();
+
+    let gorjetaEfetiva = taxaGorjetaInput;
+    if (cfgGorjeta.tipo === "fixa") {
+      gorjetaEfetiva = Number(cfgGorjeta.taxa);
+    }
+
+    const result = await criarPagamentoPixParaComanda(comandaId, gorjetaEfetiva);
+    if (!result.success) return result;
+
+    return {
+      success: true,
+      data: {
+        pagamentoId: result.data.pagamentoId,
+        mpPaymentId: result.data.mpPaymentId,
+        qrCode: result.data.qrCode,
+        qrCodeBase64: result.data.qrCodeBase64,
+        valor: result.data.valor,
+        expiresAt: result.data.expiresAt.toISOString(),
       },
+    };
+  } catch (error) {
+    console.error("Erro ao iniciar pagamento Pix:", error);
+    return { success: false, error: "Erro ao iniciar pagamento Pix." };
+  }
+}
+
+export async function verificarPagamentoPix(
+  pagamentoId: number,
+): Promise<
+  ActionResult<{
+    status: string;
+    conteudo?: string;
+  }>
+> {
+  try {
+    const user = await requireUser();
+
+    const pagamento = await db.query.pagamentosPix.findFirst({
+      where: eq(pagamentosPix.id, pagamentoId),
     });
-
-    if (!comanda) {
-      return { success: false, error: "Comanda não encontrada." };
-    }
-    if (comanda.status !== "aberta") {
-      return { success: false, error: "Comanda não está aberta." };
-    }
-    if (!comanda.caixaSessaoId) {
-      return {
-        success: false,
-        error: "Comanda não está associada a uma sessão de caixa.",
-      };
-    }
-    if (comanda.itens.length === 0 && comanda.itensLivres.length === 0) {
-      return {
-        success: false,
-        error: "Não é possível finalizar uma comanda vazia.",
-      };
+    if (!pagamento) {
+      return { success: false, error: "Pagamento não encontrado." };
     }
 
-    const sessao = await db.query.caixaSessoes.findFirst({
-      where: eq(caixaSessoes.id, comanda.caixaSessaoId),
-    });
-    if (!sessao || sessao.status !== "aberta") {
-      return { success: false, error: "Sessão de caixa não está aberta." };
+    let statusAtual = pagamento.status;
+
+    // Se ainda está pending, consulta a API do Mercado Pago
+    if (statusAtual === "pending") {
+      const cfg = getFeatureConfig("mercadopago_pix");
+      if (cfg?.accessToken) {
+        try {
+          const mp = createMpClient(cfg.accessToken);
+          const mpStatus = await mp.getPayment(pagamento.mpPaymentId);
+          if (mpStatus.status === "approved") {
+            statusAtual = "approved";
+            await db
+              .update(pagamentosPix)
+              .set({ status: "approved", paidAt: new Date() })
+              .where(eq(pagamentosPix.id, pagamentoId));
+          } else if (
+            mpStatus.status === "cancelled" ||
+            mpStatus.status === "rejected"
+          ) {
+            statusAtual = mpStatus.status;
+            await db
+              .update(pagamentosPix)
+              .set({ status: mpStatus.status })
+              .where(eq(pagamentosPix.id, pagamentoId));
+          }
+        } catch (err) {
+          console.error("[MP Pix] erro ao consultar status:", err);
+        }
+      }
     }
 
-    // Validar estoque ANTES de qualquer mutação
-    for (const item of comanda.itens) {
-      const estoqueAtual = Number(item.produto.estoqueAtual);
-      const qtdNecessaria = Number(item.quantidade);
-      if (estoqueAtual < qtdNecessaria) {
+    // Se aprovado e a comanda ainda está aberta, finaliza
+    if (statusAtual === "approved") {
+      const comanda = await db.query.comandas.findFirst({
+        where: eq(comandas.id, pagamento.comandaId),
+        columns: { status: true, caixaSessaoId: true, usuarioAberturaId: true },
+      });
+
+      if (comanda?.status === "aberta") {
+        const finalizado = await finalizarComandaCore({
+          comandaId: pagamento.comandaId,
+          userId: Number(user.id),
+          formaPagamento: "pix",
+          taxaGorjetaInput: pagamento.taxaGorjetaSnapshot,
+          gorjetaConfig: {
+            tipo: "fixa",
+            taxa: pagamento.taxaGorjetaSnapshot,
+          },
+        });
+
+        if (!finalizado.success) return finalizado;
+
+        if (comanda.caixaSessaoId) {
+          revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
+        }
+        revalidatePath("/admin/caixa");
+        revalidatePath("/admin/comandas");
+        revalidatePath("/admin/estoque");
+
         return {
-          success: false,
-          error: `Estoque insuficiente para "${item.produto.nome}". Disponível: ${estoqueAtual.toFixed(3)}, necessário: ${qtdNecessaria.toFixed(3)}.`,
+          success: true,
+          data: { status: statusAtual, conteudo: finalizado.data.conteudo },
         };
       }
     }
 
-    // Recalcular subtotal a partir dos itens (NUNCA confiar no cliente)
-    const subtotalItens = [
-      ...comanda.itens.map((i) => Number(i.subtotal)),
-      ...comanda.itensLivres.map((i) => Number(i.subtotal)),
-    ].reduce((acc, n) => acc + n, 0);
-
-    // Gorjeta: o cliente envia um valor calculado em R$. Se a config for "fixa",
-    // usamos esse valor fixo diretamente; caso contrário usamos
-    // calcGorjetaPercentual sobre a taxa enviada (tratada como percentual) OU
-    // o valor em R$ já calculado (quando o cliente enviou valor).
-    const cfg = await getConfigGorjeta();
-    const taxaRaw = parsed.data.taxaGorjeta ?? "0";
-    const taxaNum = Number(taxaRaw) || 0;
-
-    let gorjetaValor: number;
-    if (cfg.tipo === "fixa") {
-      // Config fixa: ignora input do cliente e usa valor configurado
-      gorjetaValor = Number(cfg.taxa);
-    } else if (taxaNum <= 0) {
-      gorjetaValor = 0;
-    } else if (taxaNum <= 100) {
-      // Valor pequeno é tratado como percentual (<=100)
-      // porém se o cliente enviou no formato fracionário maior que o subtotal
-      // nós fazemos o fallback para valor bruto.
-      const candidatoPct = Number(calcGorjetaPercentual(subtotalItens, taxaNum));
-      gorjetaValor = candidatoPct;
-    } else {
-      // Valor > 100 provavelmente é R$ direto
-      gorjetaValor = taxaNum;
-    }
-
-    const totalFinal = Number(calcTotalComanda(subtotalItens, gorjetaValor));
-    const dataFechamento = new Date();
-
-    // ---------- Operações "transacionais" ----------
-    // O driver neon-http não suporta transações reais; executamos na ordem
-    // que preserva consistência: estoque primeiro, depois comanda, depois
-    // comprovante.
-
-    // 1. Baixa de estoque + movimentacoes (uma por item de produto)
-    for (const item of comanda.itens) {
-      const produto = item.produto;
-      const estoqueAnterior = Number(produto.estoqueAtual);
-      const qtd = Number(item.quantidade);
-      const estoquePosterior = estoqueAnterior - qtd;
-
-      await db.insert(movimentacoesEstoque).values({
-        produtoId: produto.id,
-        tipo: "saida",
-        quantidade: toQty(qtd),
-        quantidadeAnterior: toQty(estoqueAnterior),
-        quantidadePosterior: toQty(estoquePosterior),
-        observacao: `Venda - Comanda #${comanda.numero}`,
-        comandaId: comanda.id,
-        usuarioId: Number(user.id),
-      });
-
-      await db
-        .update(produtos)
-        .set({
-          estoqueAtual: toQty(estoquePosterior),
-          updatedAt: new Date(),
-        })
-        .where(eq(produtos.id, produto.id));
-    }
-
-    // 2. Atualizar comanda
-    await db
-      .update(comandas)
-      .set({
-        status: "finalizada",
-        valorTotal: toMoney(totalFinal),
-        taxaGorjeta: toMoney(gorjetaValor),
-        formaPagamento: parsed.data.formaPagamento,
-        dataFechamento,
-        usuarioFechamentoId: Number(user.id),
-      })
-      .where(eq(comandas.id, comandaId));
-
-    // 3. Gerar e inserir comprovante
-    const conteudo = gerarConteudoComprovante({
-      numero: comanda.numero,
-      dataFechamento,
-      garcomNome: comanda.garcom?.nome ?? null,
-      sessaoId: comanda.caixaSessaoId,
-      itensProduto: comanda.itens.map((i) => ({
-        nome: i.produto.nome,
-        quantidade: i.quantidade,
-        subtotal: i.subtotal,
-      })),
-      itensLivres: comanda.itensLivres.map((i) => ({
-        descricao: i.descricao,
-        quantidade: i.quantidade,
-        subtotal: i.subtotal,
-      })),
-      subtotal: subtotalItens,
-      gorjeta: gorjetaValor,
-      total: totalFinal,
-      formaPagamento: parsed.data.formaPagamento,
-    });
-
-    await db.insert(comprovantesVenda).values({
-      comandaId: comanda.id,
-      conteudo,
-      tipo: "termico",
-      impresso: false,
-    });
-
-    revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
-    revalidatePath("/admin/caixa");
-    revalidatePath("/admin/comandas");
-    revalidatePath("/admin/estoque");
-    return { success: true, data: { conteudo } };
+    return { success: true, data: { status: statusAtual } };
   } catch (error) {
-    console.error("Erro ao finalizar comanda:", error);
-    return { success: false, error: "Erro ao finalizar comanda." };
+    console.error("Erro ao verificar pagamento Pix:", error);
+    return { success: false, error: "Erro ao verificar pagamento Pix." };
   }
 }
 

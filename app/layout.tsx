@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { Toaster } from "sonner";
+import { TENANT_CONFIG } from "@/lib/config/tenant";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,14 +22,13 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
   ),
   title: {
-    default: "Panificadora Rei dos Pães",
-    template: "%s · Rei dos Pães",
+    default: TENANT_CONFIG.metatags.titulo,
+    template: `%s · ${TENANT_CONFIG.nome}`,
   },
-  description:
-    "Pães artesanais, doces e salgados fresquinhos todos os dias. Fornada quente direto do forno.",
+  description: TENANT_CONFIG.metatags.descricao,
   openGraph: {
-    title: "Panificadora Rei dos Pães",
-    description: "Fornada quente direto do forno, todo dia.",
+    title: TENANT_CONFIG.metatags.titulo,
+    description: TENANT_CONFIG.metatags.descricao,
     type: "website",
     locale: "pt_BR",
   },
