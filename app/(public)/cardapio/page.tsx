@@ -83,7 +83,7 @@ export default async function CardapioPage({ searchParams }: CardapioPageProps) 
           Nosso cardápio
         </span>
         <h1 className="mt-4 font-display text-5xl font-bold text-ivory-50 sm:text-6xl">
-          Fresquinho, <span className="text-gradient-flame">todo dia</span>.
+          Nosso <span className="text-gradient-flame">cardápio</span>
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-sm text-onyx-200 sm:text-base">
           Produzimos tudo aqui mesmo, com ingredientes selecionados. Escolha

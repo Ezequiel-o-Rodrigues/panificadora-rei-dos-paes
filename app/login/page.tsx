@@ -74,7 +74,7 @@ export default async function LoginPage({
               required
               autoComplete="email"
               className="mt-1 block w-full rounded-xl border border-onyx-600 bg-onyx-800/70 px-4 py-2.5 text-sm text-ivory-50 shadow-sm outline-none ring-flame-500/40 transition placeholder:text-onyx-400 focus:border-flame-500 focus:ring-2"
-              placeholder="voce@reidospaes.com.br"
+              placeholder="voce@exemplo.com.br"
             />
           </div>
           <div>

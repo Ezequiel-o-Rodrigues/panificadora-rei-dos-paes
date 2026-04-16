@@ -15,7 +15,7 @@ export default async function ProdutosPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Produtos" description="Gerencie o catalogo de produtos da padaria">
+      <PageHeader title="Produtos" description="Gerencie o catálogo de produtos do estabelecimento">
         <Link href="/admin/produtos/novo">
           <Button>
             <Plus className="h-4 w-4" />

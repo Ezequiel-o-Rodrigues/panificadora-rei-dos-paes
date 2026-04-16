@@ -14,8 +14,7 @@ export function SiteFooter() {
         <div className="space-y-4">
           <Logo />
           <p className="max-w-xs text-sm text-onyx-300">
-            Pães artesanais, doces e salgados fresquinhos todos os dias, feitos
-            com ingredientes selecionados e fornada quente.
+            {TENANT_CONFIG.metatags.descricao}
           </p>
           {instagramUrl && (
             <a

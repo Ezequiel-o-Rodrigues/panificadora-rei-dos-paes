@@ -104,3 +104,87 @@ export function segmentoLabel(segmento: Segmento): string {
 export function segmentoSubstantivo(segmento: Segmento): string {
   return SEGMENTOS[segmento]?.substantivo ?? SEGMENTOS.generico.substantivo;
 }
+
+export type HeroContent = {
+  tagline: string;
+  titulo: string;
+  tituloDestaque: string;
+  descricao: string;
+  emojis: string[];
+};
+
+const HERO_DEFAULTS: Record<Segmento, HeroContent> = {
+  panificadora: {
+    tagline: "Fornada quente todo dia",
+    titulo: "O rei do pão",
+    tituloDestaque: "chegou fresquinho.",
+    descricao:
+      "Pães artesanais, bolos caseiros, doces finos e salgados irresistíveis.",
+    emojis: ["👑", "🥖", "🥐", "🧁", "🔥"],
+  },
+  churrascaria: {
+    tagline: "Na brasa todo dia",
+    titulo: "Churrasco",
+    tituloDestaque: "de verdade.",
+    descricao:
+      "Cortes nobres, tempero da casa e brasa no ponto. Tradição que se sente no sabor.",
+    emojis: ["🔥", "🥩", "🍖", "🥗", "🍺"],
+  },
+  lanchonete: {
+    tagline: "Sempre fresquinho pra você",
+    titulo: "Seu lanche",
+    tituloDestaque: "do jeito certo.",
+    descricao:
+      "Hambúrgueres artesanais, porções crocantes e milk-shakes cremosos. Feito na hora.",
+    emojis: ["🍔", "🍟", "🥤", "🧀", "🔥"],
+  },
+  restaurante: {
+    tagline: "Sabor em cada detalhe",
+    titulo: "Gastronomia",
+    tituloDestaque: "com alma.",
+    descricao:
+      "Ingredientes selecionados, preparo cuidadoso e pratos que contam histórias.",
+    emojis: ["🍽️", "🍷", "🥗", "🍝", "✨"],
+  },
+  pizzaria: {
+    tagline: "Massa fresca todo dia",
+    titulo: "Pizza",
+    tituloDestaque: "como deve ser.",
+    descricao:
+      "Massa artesanal, molho da casa e ingredientes premium. Direto do forno pra sua mesa.",
+    emojis: ["🍕", "🧀", "🍅", "🫒", "🔥"],
+  },
+  cafeteria: {
+    tagline: "Grãos especiais todo dia",
+    titulo: "Café",
+    tituloDestaque: "com personalidade.",
+    descricao:
+      "Espressos, métodos especiais, bolos caseiros e um ambiente que inspira.",
+    emojis: ["☕", "🧁", "🥐", "🍵", "✨"],
+  },
+  generico: {
+    tagline: "Qualidade todo dia",
+    titulo: "Bem-vindo",
+    tituloDestaque: "ao melhor da casa.",
+    descricao:
+      "Produtos selecionados, preparo cuidadoso e atendimento que faz a diferença.",
+    emojis: ["⭐", "🛒", "🎯", "✨", "🔥"],
+  },
+};
+
+export function getHeroContent(): HeroContent {
+  const seg = TENANT_CONFIG.segmento;
+  const defaults = HERO_DEFAULTS[seg] ?? HERO_DEFAULTS.generico;
+  return {
+    tagline:
+      process.env.NEXT_PUBLIC_TENANT_HERO_TAGLINE ?? defaults.tagline,
+    titulo:
+      process.env.NEXT_PUBLIC_TENANT_HERO_TITULO ?? defaults.titulo,
+    tituloDestaque:
+      process.env.NEXT_PUBLIC_TENANT_HERO_TITULO_DESTAQUE ??
+      defaults.tituloDestaque,
+    descricao:
+      process.env.NEXT_PUBLIC_TENANT_HERO_DESCRICAO ?? defaults.descricao,
+    emojis: defaults.emojis,
+  };
+}

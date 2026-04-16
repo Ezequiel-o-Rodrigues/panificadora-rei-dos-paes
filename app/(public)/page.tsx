@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { ArrowRight, Clock, Flame, MapPin } from "lucide-react";
 import { InstagramIcon } from "@/components/shared/icons";
-import { TENANT_CONFIG } from "@/lib/config/tenant";
+import { TENANT_CONFIG, getHeroContent } from "@/lib/config/tenant";
 
 export default function HomePage() {
   const instagramHandle = TENANT_CONFIG.contato.instagram;
   const instagramUrl = instagramHandle
     ? `https://www.instagram.com/${instagramHandle.replace(/^@/, "")}/`
     : null;
+  const hero = getHeroContent();
+
   return (
     <>
       <section className="relative overflow-hidden">
@@ -27,18 +29,17 @@ export default function HomePage() {
           <div className="flex flex-col justify-center">
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-flame-500/40 bg-flame-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-flame-300 backdrop-blur">
               <Flame className="h-3.5 w-3.5 animate-flicker" />
-              Fornada quente todo dia
+              {hero.tagline}
             </span>
             <h1 className="mt-6 font-display text-5xl font-bold leading-[1.02] text-ivory-50 sm:text-6xl lg:text-7xl">
-              O rei do pão
+              {hero.titulo}
               <br />
-              <span className="text-gradient-flame">chegou fresquinho.</span>
+              <span className="text-gradient-flame">{hero.tituloDestaque}</span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-relaxed text-onyx-200 sm:text-lg">
-              Pães artesanais, bolos caseiros, doces finos e salgados
-              irresistíveis. Na{" "}
+              {hero.descricao} Na{" "}
               <strong className="text-flame-400">{TENANT_CONFIG.nome}</strong>,
-              cada mordida é uma tradição que atravessa gerações.
+              cada detalhe faz a diferença.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -60,26 +61,30 @@ export default function HomePage() {
                 </a>
               )}
             </div>
-            <div className="mt-10 grid grid-cols-2 gap-4 text-sm sm:max-w-md">
-              <div className="flex items-start gap-3">
-                <div className="rounded-full bg-flame-500/10 p-2 text-flame-400 ring-1 ring-flame-500/30">
-                  <Clock className="h-4 w-4" />
+            {TENANT_CONFIG.contato.telefone && (
+              <div className="mt-10 grid grid-cols-2 gap-4 text-sm sm:max-w-md">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-flame-500/10 p-2 text-flame-400 ring-1 ring-flame-500/30">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-ivory-50">Aberto agora</div>
+                    <div className="text-xs text-onyx-300">Confira nosso horário</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-ivory-50">6h às 20h</div>
-                  <div className="text-xs text-onyx-300">Seg a Sáb</div>
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-flame-500/10 p-2 text-flame-400 ring-1 ring-flame-500/30">
+                    <MapPin className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-ivory-50">
+                      {TENANT_CONFIG.contato.telefone}
+                    </div>
+                    <div className="text-xs text-onyx-300">Ligue ou visite</div>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="rounded-full bg-flame-500/10 p-2 text-flame-400 ring-1 ring-flame-500/30">
-                  <MapPin className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="font-semibold text-ivory-50">No balcão</div>
-                  <div className="text-xs text-onyx-300">Pronta entrega</div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="relative flex items-center justify-center">
@@ -91,19 +96,19 @@ export default function HomePage() {
               <div className="absolute inset-6 rounded-[40%_60%_70%_30%/40%_50%_60%_50%] bg-gradient-to-br from-flame-300 via-flame-500 to-rust-700 shadow-flame animate-flicker" />
               <div className="absolute inset-12 rounded-[50%_50%_40%_60%/60%_40%_60%_40%] bg-gradient-to-br from-flame-200/40 to-rust-600/30 mix-blend-overlay" />
               <div className="absolute inset-0 flex items-center justify-center text-[11rem] leading-none drop-shadow-2xl">
-                👑
+                {hero.emojis[0]}
               </div>
               <div className="absolute -left-4 top-1/3 rotate-[-12deg] text-6xl drop-shadow-2xl">
-                🥖
+                {hero.emojis[1]}
               </div>
               <div className="absolute -right-2 bottom-1/4 rotate-[15deg] text-5xl drop-shadow-2xl">
-                🥐
+                {hero.emojis[2]}
               </div>
               <div className="absolute -bottom-4 left-1/4 text-5xl drop-shadow-2xl">
-                🧁
+                {hero.emojis[3]}
               </div>
               <div className="absolute right-6 top-4 text-4xl drop-shadow-2xl">
-                🔥
+                {hero.emojis[4]}
               </div>
             </div>
           </div>
@@ -116,19 +121,17 @@ export default function HomePage() {
             <Flame className="h-6 w-6 text-flame-400 animate-flicker" />
           </div>
           <h2 className="mt-4 font-display text-3xl font-bold text-ivory-50 sm:text-4xl">
-            Novidades saindo do forno
+            Confira nosso cardápio
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-onyx-200">
-            Estamos criando um cardápio digital interativo, com modelos 3D,
-            animações e experiência pensada para o seu celular. Enquanto isso,
-            explore a versão inicial em{" "}
+            Navegue pelo cardápio completo, veja fotos e preços de todos os
+            nossos produtos. Atualizamos com frequência!{" "}
             <Link
               href="/cardapio"
               className="font-semibold text-flame-400 underline underline-offset-4"
             >
-              /cardapio
+              Ver cardápio
             </Link>
-            .
           </p>
         </div>
       </section>

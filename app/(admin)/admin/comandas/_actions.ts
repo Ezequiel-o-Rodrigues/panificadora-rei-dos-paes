@@ -5,6 +5,7 @@ import { comandas, comprovantesVenda } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { formatBRL } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
+import { TENANT_CONFIG } from "@/lib/config/tenant";
 import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -89,7 +90,8 @@ function gerarConteudoComprovante(
     return " ".repeat(padding) + txt;
   };
 
-  linhas.push(centralizar("PANIFICADORA REI DOS PAES"));
+  const nomeTenant = TENANT_CONFIG.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  linhas.push(centralizar(nomeTenant.substring(0, LARGURA)));
   linhas.push(centralizar("COMPROVANTE DE VENDA"));
   linhas.push(separador);
   linhas.push(`Comanda: #${String(comanda.numero).padStart(4, "0")}`);

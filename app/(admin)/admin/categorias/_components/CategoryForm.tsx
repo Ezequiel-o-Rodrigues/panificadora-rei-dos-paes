@@ -67,7 +67,7 @@ export function CategoryForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <Input
         label="Nome"
-        placeholder="Ex: Pães Especiais"
+        placeholder="Ex: Pratos Principais"
         error={errors.nome?.message}
         {...register("nome")}
       />
