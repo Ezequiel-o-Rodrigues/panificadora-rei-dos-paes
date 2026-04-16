@@ -1,11 +1,11 @@
 "use server";
 
 import { db } from "@/db";
-import { produtos } from "@/db/schema";
+import { produtos, itensComanda, movimentacoesEstoque, perdasEstoque } from "@/db/schema";
 import { produtoSchema } from "@/lib/validators/produto";
 import { slugify } from "@/lib/slugify";
 import { saveProductImage, deleteProductImage } from "@/lib/upload";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: boolean; error?: string };
@@ -225,15 +225,34 @@ export async function deleteProduto(
       return { success: false, error: "Produto não encontrado." };
     }
 
-    await db
-      .update(produtos)
-      .set({ ativo: false, updatedAt: new Date() })
-      .where(eq(produtos.id, id));
+    // Check for linked comanda items
+    const [itensResult] = await db
+      .select({ count: count() })
+      .from(itensComanda)
+      .where(eq(itensComanda.produtoId, id));
+
+    if (itensResult && itensResult.count > 0) {
+      return {
+        success: false,
+        error: `Não é possível excluir. Existem ${itensResult.count} item(ns) de comanda vinculado(s) a este produto.`,
+      };
+    }
+
+    // Delete related stock movements and losses first
+    await db.delete(movimentacoesEstoque).where(eq(movimentacoesEstoque.produtoId, id));
+    await db.delete(perdasEstoque).where(eq(perdasEstoque.produtoId, id));
+
+    // Delete product image if exists
+    if (produto.imagemUrl) {
+      await deleteProductImage(produto.imagemUrl);
+    }
+
+    await db.delete(produtos).where(eq(produtos.id, id));
 
     revalidatePath("/admin/produtos");
     return { success: true };
   } catch (error) {
-    console.error("Erro ao desativar produto:", error);
-    return { success: false, error: "Erro ao desativar produto." };
+    console.error("Erro ao excluir produto:", error);
+    return { success: false, error: "Erro ao excluir produto." };
   }
 }
