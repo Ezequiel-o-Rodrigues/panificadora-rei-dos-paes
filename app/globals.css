@@ -4,52 +4,53 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 
-  /* ===== Onyx (preto profundo) ===== */
-  --color-onyx-50: #fafaf9;
-  --color-onyx-100: #f2f1ee;
-  --color-onyx-200: #d6d3ce;
-  --color-onyx-300: #a8a29e;
-  --color-onyx-400: #78716c;
-  --color-onyx-500: #57534e;
-  --color-onyx-600: #3c3633;
-  --color-onyx-700: #26211e;
-  --color-onyx-800: #171412;
-  --color-onyx-900: #0c0a09;
-  --color-onyx-950: #050403;
+  /* ===== Onyx (grafite profundo — para texto e cartões escuros pontuais) ===== */
+  --color-onyx-50: #f7f5f2;
+  --color-onyx-100: #ebe7e0;
+  --color-onyx-200: #d4cec4;
+  --color-onyx-300: #a6a096;
+  --color-onyx-400: #6e6a62;
+  --color-onyx-500: #4a4742;
+  --color-onyx-600: #322f2b;
+  --color-onyx-700: #22201d;
+  --color-onyx-800: #161412;
+  --color-onyx-900: #0c0b0a;
+  --color-onyx-950: #050504;
 
-  /* ===== Flame (laranja vivo do logo) ===== */
-  --color-flame-50: #fff5eb;
-  --color-flame-100: #ffe4c4;
-  --color-flame-200: #ffc78a;
-  --color-flame-300: #ffa855;
-  --color-flame-400: #ff8c28;
+  /* ===== Flame (laranja vibrante da marca) ===== */
+  --color-flame-50: #fff6ec;
+  --color-flame-100: #ffe8cc;
+  --color-flame-200: #ffcd94;
+  --color-flame-300: #ffb05a;
+  --color-flame-400: #ff922d;
   --color-flame-500: #ff6d0a;
   --color-flame-600: #e85500;
   --color-flame-700: #b83f00;
   --color-flame-800: #8a2f00;
   --color-flame-900: #5c1f00;
 
-  /* ===== Rust (vermelho brasa) ===== */
-  --color-rust-400: #ef4444;
+  /* ===== Rust (vermelho brasa — acentos) ===== */
+  --color-rust-400: #f05454;
   --color-rust-500: #dc2626;
   --color-rust-600: #b91c1c;
   --color-rust-700: #991b1b;
   --color-rust-800: #7f1d1d;
   --color-rust-900: #450a0a;
 
-  /* ===== Ivory (texto claro) ===== */
-  --color-ivory-50: #fafaf5;
-  --color-ivory-100: #f5f4ec;
-  --color-ivory-200: #ece9d8;
+  /* ===== Ivory (creme quente — fundos e superfícies claras) ===== */
+  --color-ivory-50: #fffaf2;
+  --color-ivory-100: #fdf3e3;
+  --color-ivory-200: #f7e7ce;
+  --color-ivory-300: #efd6ae;
 
-  /* ===== Semânticos ===== */
-  --color-background: #1f1712;
-  --color-surface: #2a1f18;
-  --color-surface-raised: #352820;
-  --color-foreground: var(--color-ivory-50);
-  --color-muted: var(--color-onyx-800);
-  --color-muted-foreground: var(--color-onyx-300);
-  --color-border: var(--color-onyx-700);
+  /* ===== Semânticos (light-first) ===== */
+  --color-background: #fdf6ea;
+  --color-surface: #fffaf0;
+  --color-surface-raised: #ffffff;
+  --color-foreground: #1a1412;
+  --color-muted: #f4ead8;
+  --color-muted-foreground: #6e6a62;
+  --color-border: #e6d9c0;
   --color-ring: var(--color-flame-500);
 
   --radius-xs: 0.25rem;
@@ -59,13 +60,14 @@
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
 
-  --shadow-flame: 0 0 40px rgba(255, 109, 10, 0.35), 0 10px 30px -10px rgba(220, 38, 38, 0.3);
-  --shadow-glow-lg: 0 0 60px rgba(255, 140, 40, 0.5);
-  --shadow-deep: 0 25px 60px -20px rgba(0, 0, 0, 0.9);
+  --shadow-flame: 0 10px 30px -8px rgba(255, 109, 10, 0.45), 0 4px 12px -4px rgba(220, 38, 38, 0.25);
+  --shadow-glow-lg: 0 0 60px rgba(255, 140, 40, 0.55);
+  --shadow-soft: 0 8px 24px -10px rgba(34, 26, 20, 0.18), 0 2px 6px -2px rgba(34, 26, 20, 0.08);
+  --shadow-deep: 0 25px 60px -20px rgba(34, 26, 20, 0.35);
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html {
@@ -76,10 +78,11 @@ html {
 
 body {
   background:
-    radial-gradient(1400px 700px at 15% -5%, rgba(255, 140, 40, 0.35), transparent 55%),
-    radial-gradient(1000px 600px at 95% 5%, rgba(220, 38, 38, 0.22), transparent 60%),
-    radial-gradient(900px 500px at 50% 100%, rgba(255, 109, 10, 0.18), transparent 65%),
-    linear-gradient(180deg, #2a1f18 0%, #1f1712 45%, #17110d 100%);
+    radial-gradient(1200px 600px at 10% -5%, rgba(255, 146, 45, 0.28), transparent 55%),
+    radial-gradient(900px 500px at 95% 8%, rgba(255, 109, 10, 0.18), transparent 60%),
+    radial-gradient(800px 450px at 50% 100%, rgba(220, 38, 38, 0.10), transparent 65%),
+    linear-gradient(180deg, #fff4e0 0%, #fdf6ea 45%, #f9efd9 100%);
+  background-attachment: fixed;
   color: var(--color-foreground);
   font-family: var(--font-sans);
   min-height: 100dvh;
@@ -92,11 +95,25 @@ body {
   letter-spacing: -0.02em;
 }
 
+/* Cartão de vidro claro — para o tema light */
 .glass {
   background: linear-gradient(
     135deg,
-    rgba(62, 48, 38, 0.78),
-    rgba(38, 28, 22, 0.62)
+    rgba(255, 255, 255, 0.85),
+    rgba(253, 243, 227, 0.70)
+  );
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255, 140, 40, 0.28);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Cartão de vidro escuro — para seções com contraste dramático (rodapé, hero inverso) */
+.glass-dark {
+  background: linear-gradient(
+    135deg,
+    rgba(22, 20, 18, 0.88),
+    rgba(12, 11, 10, 0.78)
   );
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
@@ -108,14 +125,14 @@ body {
   background: linear-gradient(
     135deg,
     rgba(255, 109, 10, 0.14),
-    rgba(220, 38, 38, 0.08)
+    rgba(255, 146, 45, 0.08)
   );
   backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 140, 40, 0.3);
+  border: 1px solid rgba(255, 140, 40, 0.35);
 }
 
 .text-gradient-flame {
-  background: linear-gradient(135deg, #ffa855 0%, #ff6d0a 45%, #dc2626 100%);
+  background: linear-gradient(135deg, #ff922d 0%, #ff6d0a 45%, #dc2626 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -124,15 +141,15 @@ body {
 
 .bg-grain {
   background-image: radial-gradient(
-    rgba(255, 255, 255, 0.04) 1px,
+    rgba(34, 26, 20, 0.05) 1px,
     transparent 1px
   );
   background-size: 4px 4px;
 }
 
 .ring-flame {
-  box-shadow: 0 0 0 1px rgba(255, 140, 40, 0.4),
-              0 0 30px -5px rgba(255, 109, 10, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 140, 40, 0.45),
+              0 0 30px -5px rgba(255, 109, 10, 0.35);
 }
 
 @keyframes flicker {
