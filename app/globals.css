@@ -121,6 +121,23 @@ body {
   box-shadow: var(--shadow-deep);
 }
 
+/* Dentro do admin, .glass volta a ser escuro para preservar o design do painel */
+.admin-scope .glass {
+  background: linear-gradient(
+    135deg,
+    rgba(62, 48, 38, 0.78),
+    rgba(38, 28, 22, 0.62)
+  );
+  border: 1px solid rgba(255, 140, 40, 0.22);
+  box-shadow: var(--shadow-deep);
+}
+.admin-scope .bg-grain {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px
+  );
+}
+
 .glass-flame {
   background: linear-gradient(
     135deg,

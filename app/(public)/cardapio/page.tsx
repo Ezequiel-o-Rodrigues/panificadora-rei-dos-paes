@@ -69,23 +69,23 @@ export default async function CardapioPage({ searchParams }: CardapioPageProps) 
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-12 sm:px-6">
       {mesaNumero !== null && (
         <div className="mb-6 rounded-2xl border border-flame-500/40 bg-flame-500/10 px-5 py-4 text-center backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.2em] text-flame-300">
+          <p className="text-xs uppercase tracking-[0.2em] text-flame-600">
             Você está na
           </p>
-          <p className="mt-1 font-display text-2xl font-bold text-flame-400">
+          <p className="mt-1 font-display text-2xl font-bold text-flame-600">
             Mesa {mesaNumero}
           </p>
         </div>
       )}
 
       <header className="mb-12 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-flame-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-flame-300 backdrop-blur">
+        <span className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-flame-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-flame-600 backdrop-blur">
           Nosso cardápio
         </span>
-        <h1 className="mt-4 font-display text-5xl font-bold text-ivory-50 sm:text-6xl">
+        <h1 className="mt-4 font-display text-5xl font-bold text-onyx-900 sm:text-6xl">
           Nosso <span className="text-gradient-flame">cardápio</span>
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-sm text-onyx-200 sm:text-base">
+        <p className="mx-auto mt-4 max-w-xl text-sm text-onyx-600 sm:text-base">
           Produzimos tudo aqui mesmo, com ingredientes selecionados. Escolha
           seus preferidos e venha buscar no balcão
           {whatsappEnabled ? " ou peça pelo WhatsApp" : ""}.
@@ -94,10 +94,10 @@ export default async function CardapioPage({ searchParams }: CardapioPageProps) 
 
       {cats.length === 0 ? (
         <div className="glass mx-auto max-w-lg rounded-3xl p-8 text-center">
-          <p className="text-sm text-onyx-200">
+          <p className="text-sm text-onyx-700">
             Banco de dados ainda não configurado. Rode o seed:
           </p>
-          <code className="mt-3 inline-block rounded-lg bg-onyx-950 px-4 py-2 text-xs text-flame-300">
+          <code className="mt-3 inline-block rounded-lg bg-onyx-900 px-4 py-2 text-xs text-flame-300">
             npm run db:seed
           </code>
         </div>

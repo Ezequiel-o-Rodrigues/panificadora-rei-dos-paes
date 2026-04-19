@@ -27,24 +27,24 @@ export default function HomePage() {
         />
         <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-20 pt-12 sm:px-6 md:pt-20 lg:grid-cols-2 lg:pt-28">
           <div className="flex flex-col justify-center">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-flame-500/40 bg-flame-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-flame-300 backdrop-blur">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-flame-500/40 bg-flame-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-flame-600 backdrop-blur">
               <Flame className="h-3.5 w-3.5 animate-flicker" />
               {hero.tagline}
             </span>
-            <h1 className="mt-6 font-display text-5xl font-bold leading-[1.02] text-ivory-50 sm:text-6xl lg:text-7xl">
+            <h1 className="mt-6 font-display text-5xl font-bold leading-[1.02] text-onyx-900 sm:text-6xl lg:text-7xl">
               {hero.titulo}
               <br />
               <span className="text-gradient-flame">{hero.tituloDestaque}</span>
             </h1>
-            <p className="mt-6 max-w-lg text-base leading-relaxed text-onyx-200 sm:text-lg">
+            <p className="mt-6 max-w-lg text-base leading-relaxed text-onyx-600 sm:text-lg">
               {hero.descricao} Na{" "}
-              <strong className="text-flame-400">{TENANT_CONFIG.nome}</strong>,
+              <strong className="text-flame-600">{TENANT_CONFIG.nome}</strong>,
               cada detalhe faz a diferença.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/cardapio"
-                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-flame-400 via-flame-500 to-rust-600 px-7 py-3.5 text-sm font-bold text-onyx-950 shadow-flame transition hover:shadow-glow-lg"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-flame-400 via-flame-500 to-rust-500 px-7 py-3.5 text-sm font-bold text-white shadow-flame transition hover:shadow-glow-lg"
               >
                 Ver cardápio
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
@@ -54,7 +54,7 @@ export default function HomePage() {
                   href={instagramUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-onyx-900/60 px-6 py-3.5 text-sm font-semibold text-ivory-50 backdrop-blur transition hover:border-flame-500 hover:bg-onyx-800"
+                  className="inline-flex items-center gap-2 rounded-full border border-flame-500/40 bg-white/70 px-6 py-3.5 text-sm font-semibold text-onyx-800 backdrop-blur transition hover:border-flame-500 hover:bg-flame-500/10"
                 >
                   <InstagramIcon className="h-4 w-4" />
                   {instagramHandle}
@@ -64,23 +64,23 @@ export default function HomePage() {
             {TENANT_CONFIG.contato.telefone && (
               <div className="mt-10 grid grid-cols-2 gap-4 text-sm sm:max-w-md">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-flame-500/10 p-2 text-flame-400 ring-1 ring-flame-500/30">
+                  <div className="rounded-full bg-flame-500/10 p-2 text-flame-600 ring-1 ring-flame-500/30">
                     <Clock className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="font-semibold text-ivory-50">Aberto agora</div>
-                    <div className="text-xs text-onyx-300">Confira nosso horário</div>
+                    <div className="font-semibold text-onyx-900">Aberto agora</div>
+                    <div className="text-xs text-onyx-500">Confira nosso horário</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-flame-500/10 p-2 text-flame-400 ring-1 ring-flame-500/30">
+                  <div className="rounded-full bg-flame-500/10 p-2 text-flame-600 ring-1 ring-flame-500/30">
                     <MapPin className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="font-semibold text-ivory-50">
+                    <div className="font-semibold text-onyx-900">
                       {TENANT_CONFIG.contato.telefone}
                     </div>
-                    <div className="text-xs text-onyx-300">Ligue ou visite</div>
+                    <div className="text-xs text-onyx-500">Ligue ou visite</div>
                   </div>
                 </div>
               </div>
@@ -117,18 +117,18 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="glass rounded-3xl p-8 text-center sm:p-10">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-flame-500/10 ring-1 ring-flame-500/30">
-            <Flame className="h-6 w-6 text-flame-400 animate-flicker" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-flame-500/15 ring-1 ring-flame-500/40">
+            <Flame className="h-6 w-6 text-flame-600 animate-flicker" />
           </div>
-          <h2 className="mt-4 font-display text-3xl font-bold text-ivory-50 sm:text-4xl">
+          <h2 className="mt-4 font-display text-3xl font-bold text-onyx-900 sm:text-4xl">
             Confira nosso cardápio
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-onyx-200">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-onyx-600">
             Navegue pelo cardápio completo, veja fotos e preços de todos os
             nossos produtos. Atualizamos com frequência!{" "}
             <Link
               href="/cardapio"
-              className="font-semibold text-flame-400 underline underline-offset-4"
+              className="font-semibold text-flame-600 underline underline-offset-4 hover:text-flame-700"
             >
               Ver cardápio
             </Link>

@@ -89,12 +89,12 @@ export function CardapioInterativo({
           <section key={cat.id} id={cat.slug}>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div>
-                <h2 className="font-display text-3xl font-bold text-ivory-50 sm:text-4xl">
+                <h2 className="font-display text-3xl font-bold text-onyx-900 sm:text-4xl">
                   {cat.icone && <span className="mr-3 text-2xl">{cat.icone}</span>}
                   {cat.nome}
                 </h2>
                 {cat.descricao && (
-                  <p className="mt-1 text-sm text-onyx-300">{cat.descricao}</p>
+                  <p className="mt-1 text-sm text-onyx-500">{cat.descricao}</p>
                 )}
               </div>
               <span className="text-xs uppercase tracking-wider text-onyx-400">
@@ -108,7 +108,7 @@ export function CardapioInterativo({
                 return (
                   <article
                     key={p.id}
-                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-onyx-700/80 bg-onyx-900/60 backdrop-blur-sm transition hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame"
+                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-flame-500/20 bg-white/80 backdrop-blur-sm shadow-soft transition hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame"
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
                       <ProductImage
@@ -119,22 +119,22 @@ export function CardapioInterativo({
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                       {p.destaque && (
-                        <span className="absolute right-3 top-3 rounded-full bg-gradient-to-br from-flame-400 to-rust-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-onyx-950 shadow-flame">
+                        <span className="absolute right-3 top-3 rounded-full bg-gradient-to-br from-flame-400 to-rust-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-flame">
                           Top
                         </span>
                       )}
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-onyx-900/80 to-transparent"
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/90 to-transparent"
                       />
                     </div>
                     <div className="relative flex flex-1 flex-col gap-3 p-5">
                       <div>
-                        <h3 className="font-display text-xl font-bold text-ivory-50">
+                        <h3 className="font-display text-xl font-bold text-onyx-900">
                           {p.nome}
                         </h3>
                         {p.descricao && (
-                          <p className="mt-1 line-clamp-2 text-xs text-onyx-300">
+                          <p className="mt-1 line-clamp-2 text-xs text-onyx-500">
                             {p.descricao}
                           </p>
                         )}
@@ -156,18 +156,18 @@ export function CardapioInterativo({
                                   type="button"
                                   onClick={() => remover(p.id)}
                                   aria-label="Remover um"
-                                  className="flex h-9 w-9 items-center justify-center rounded-full border border-flame-500/40 bg-flame-500/10 text-flame-300 transition hover:border-flame-500 hover:bg-flame-500/20"
+                                  className="flex h-9 w-9 items-center justify-center rounded-full border border-flame-500/40 bg-flame-500/10 text-flame-600 transition hover:border-flame-500 hover:bg-flame-500/20"
                                 >
                                   <Minus className="h-4 w-4" />
                                 </button>
-                                <span className="min-w-[1.5rem] text-center font-semibold text-ivory-50">
+                                <span className="min-w-[1.5rem] text-center font-semibold text-onyx-900">
                                   {qtd}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => adicionar(p.id)}
                                   aria-label="Adicionar um"
-                                  className="flex h-9 w-9 items-center justify-center rounded-full border border-flame-500/40 bg-flame-500/10 text-flame-300 transition hover:border-flame-500 hover:bg-flame-500/20"
+                                  className="flex h-9 w-9 items-center justify-center rounded-full border border-flame-500/40 bg-flame-500/10 text-flame-600 transition hover:border-flame-500 hover:bg-flame-500/20"
                                 >
                                   <Plus className="h-4 w-4" />
                                 </button>
@@ -176,7 +176,7 @@ export function CardapioInterativo({
                               <button
                                 type="button"
                                 onClick={() => adicionar(p.id)}
-                                className="flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-flame-500 to-flame-600 px-3 text-xs font-bold text-white shadow-lg shadow-flame-500/25 transition hover:from-flame-400 hover:to-flame-500"
+                                className="flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-flame-500 to-flame-600 px-3 text-xs font-bold text-white shadow-lg shadow-flame-500/30 transition hover:from-flame-400 hover:to-flame-500"
                               >
                                 <Plus className="h-4 w-4" />
                                 Adicionar
