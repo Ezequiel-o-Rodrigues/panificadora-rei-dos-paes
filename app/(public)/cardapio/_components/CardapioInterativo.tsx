@@ -15,6 +15,7 @@ export type CardapioProduto = {
   imagemUrl: string | null;
   unidadeMedida: string;
   destaque: boolean;
+  esgotado: boolean;
 };
 
 export type CardapioCategoria = {
@@ -105,23 +106,38 @@ export function CardapioInterativo({
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {cat.produtos.map((p) => {
                 const qtd = carrinho[p.id] ?? 0;
+                const esgotado = p.esgotado;
                 return (
                   <article
                     key={p.id}
-                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-flame-500/20 bg-white/80 backdrop-blur-sm shadow-soft transition hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame"
+                    className={
+                      "group relative flex flex-col overflow-hidden rounded-3xl border bg-white/80 backdrop-blur-sm shadow-soft transition " +
+                      (esgotado
+                        ? "border-onyx-300/40 opacity-70 grayscale"
+                        : "border-flame-500/20 hover:-translate-y-1 hover:border-flame-500/60 hover:shadow-flame")
+                    }
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
                       <ProductImage
                         src={p.imagemUrl}
                         alt={p.nome}
-                        className="h-full w-full transition duration-500 group-hover:scale-105"
+                        className={
+                          "h-full w-full transition duration-500 " +
+                          (esgotado ? "" : "group-hover:scale-105")
+                        }
                         rounded="none"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
-                      {p.destaque && (
-                        <span className="absolute right-3 top-3 rounded-full bg-gradient-to-br from-flame-400 to-rust-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-flame">
-                          Top
+                      {esgotado ? (
+                        <span className="absolute right-3 top-3 rounded-full bg-onyx-900/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-ivory-50 shadow">
+                          Esgotado
                         </span>
+                      ) : (
+                        p.destaque && (
+                          <span className="absolute right-3 top-3 rounded-full bg-gradient-to-br from-flame-400 to-rust-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-flame">
+                            Top
+                          </span>
+                        )
                       )}
                       <div
                         aria-hidden
@@ -148,7 +164,7 @@ export function CardapioInterativo({
                             por {p.unidadeMedida}
                           </span>
                         </div>
-                        {whatsappEnabled && (
+                        {whatsappEnabled && !esgotado && (
                           <div className="flex items-center gap-2">
                             {qtd > 0 ? (
                               <>
@@ -183,6 +199,11 @@ export function CardapioInterativo({
                               </button>
                             )}
                           </div>
+                        )}
+                        {whatsappEnabled && esgotado && (
+                          <span className="text-xs font-semibold uppercase tracking-wider text-onyx-400">
+                            Indisponível
+                          </span>
                         )}
                       </div>
                     </div>

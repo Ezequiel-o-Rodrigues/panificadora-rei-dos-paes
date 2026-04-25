@@ -5,8 +5,14 @@ export const produtoSchema = z.object({
   categoriaId: z.coerce.number().int().positive("Selecione uma categoria"),
   descricao: z.string().optional(),
   preco: z.string().refine((v) => Number(v) > 0, "Preço deve ser maior que zero"),
+  custoUnitario: z
+    .string()
+    .optional()
+    .default("0")
+    .refine((v) => Number(v) >= 0, "Custo não pode ser negativo"),
   estoqueAtual: z.string().optional().default("0"),
   estoqueMinimo: z.string().optional().default("0"),
+  estoqueMaximo: z.string().optional().default("0"),
   unidadeMedida: z
     .enum([
       "un",

@@ -7,7 +7,7 @@ import {
   entradaEstoqueSchema,
   perdaEstoqueSchema,
 } from "@/lib/validators/estoque";
-import { calcValorPerda } from "@/lib/calculations";
+import { calcValorPerda, getCustoEfetivo } from "@/lib/calculations";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -205,7 +205,7 @@ export async function registrarInventario(
       // 2. Se a diferença for negativa, registra uma perda
       if (diferenca < 0) {
         const qtdPerda = Math.abs(diferenca);
-        const valorPerda = calcValorPerda(qtdPerda, produto.preco);
+        const valorPerda = calcValorPerda(qtdPerda, getCustoEfetivo(produto));
 
         await db.insert(perdasEstoque).values({
           produtoId: produto.id,
@@ -277,7 +277,7 @@ export async function registrarPerda(
     const estoqueAtual = Number(produto.estoqueAtual);
     const estoquePosterior = Math.max(0, estoqueAtual - quantidade);
     const quantidadeRealBaixada = estoqueAtual - estoquePosterior;
-    const valorPerda = calcValorPerda(quantidade, produto.preco);
+    const valorPerda = calcValorPerda(quantidade, getCustoEfetivo(produto));
 
     // 1. Insere a perda (registra sempre a quantidade informada pelo usuário)
     await db.insert(perdasEstoque).values({

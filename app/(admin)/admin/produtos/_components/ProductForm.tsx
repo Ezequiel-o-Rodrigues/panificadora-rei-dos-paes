@@ -58,7 +58,9 @@ export function ProductForm({
       categoriaId: defaultValues?.categoriaId ?? 0,
       descricao: defaultValues?.descricao ?? "",
       preco: defaultValues?.preco ?? "",
+      custoUnitario: defaultValues?.custoUnitario ?? "0",
       estoqueMinimo: defaultValues?.estoqueMinimo ?? "0",
+      estoqueMaximo: defaultValues?.estoqueMaximo ?? "0",
       unidadeMedida: defaultValues?.unidadeMedida ?? "un",
       pesoGramas: defaultValues?.pesoGramas ?? undefined,
       disponivelHoje: defaultValues?.disponivelHoje ?? true,
@@ -104,7 +106,9 @@ export function ProductForm({
       formData.set("categoriaId", String(data.categoriaId));
       formData.set("descricao", data.descricao ?? "");
       formData.set("preco", data.preco);
+      formData.set("custoUnitario", data.custoUnitario ?? "0");
       formData.set("estoqueMinimo", data.estoqueMinimo ?? "0");
+      formData.set("estoqueMaximo", data.estoqueMaximo ?? "0");
       formData.set("unidadeMedida", data.unidadeMedida);
       formData.set(
         "pesoGramas",
@@ -234,9 +238,9 @@ export function ProductForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Input
-          label="Preço (R$)"
+          label="Preço de venda (R$)"
           type="number"
           step="0.01"
           min="0.01"
@@ -246,17 +250,42 @@ export function ProductForm({
         />
 
         <Input
-          label="Estoque Mínimo"
+          label="Custo de aquisição (R$)"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="0,00"
+          error={errors.custoUnitario?.message}
+          hint="Quanto você paga ao fornecedor por unidade. Usado no cálculo de margem e perdas."
+          {...register("custoUnitario")}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <Input
+          label="Estoque mínimo"
           type="number"
           step="0.001"
           min="0"
           placeholder="0"
           error={errors.estoqueMinimo?.message}
+          hint="Alerta quando estoque chegar nesse valor."
           {...register("estoqueMinimo")}
         />
 
+        <Input
+          label="Estoque máximo"
+          type="number"
+          step="0.001"
+          min="0"
+          placeholder="0"
+          error={errors.estoqueMaximo?.message}
+          hint="Limite ideal para não perder por validade. 0 = sem limite."
+          {...register("estoqueMaximo")}
+        />
+
         <Select
-          label="Unidade de Medida"
+          label="Unidade de medida"
           options={UNIDADE_OPTIONS}
           error={errors.unidadeMedida?.message}
           {...register("unidadeMedida")}

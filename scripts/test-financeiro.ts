@@ -28,6 +28,7 @@ import {
 import {
   calcSubtotal,
   calcValorPerda,
+  getCustoEfetivo,
   toMoney,
   toQty,
 } from "@/lib/calculations";
@@ -135,7 +136,7 @@ async function registrarPerdaInline(
   const ant = Number(p.estoqueAtual);
   const post = Math.max(0, ant - qtd);
   const baixadoReal = ant - post;
-  const valor = calcValorPerda(qtd, p.preco);
+  const valor = calcValorPerda(qtd, getCustoEfetivo(p));
 
   await db.insert(perdasEstoque).values({
     produtoId,
@@ -192,7 +193,7 @@ async function registrarInventarioInline(
       await db.insert(perdasEstoque).values({
         produtoId: p.id,
         quantidade: toQty(qtdPerda),
-        valor: calcValorPerda(qtdPerda, p.preco),
+        valor: calcValorPerda(qtdPerda, getCustoEfetivo(p)),
         motivo: "Inventário físico - ajuste",
         usuarioId: userId,
       });
@@ -244,11 +245,16 @@ async function setup() {
   created.categoriaId = cat.id;
   ok("categoria [TESTE] criada", cat.id > 0, `id=${cat.id}`);
 
-  // 3 produtos com estoque inicial conhecido
+  // 4 produtos: 3 com custo cadastrado + 1 sem custo (testa fallback p/ preço)
   const seed = [
-    { nome: `${PREFIXO} Pão`, preco: "5.00", estoque: "100.000", unidade: "un" as const },
-    { nome: `${PREFIXO} Bolo (kg)`, preco: "32.00", estoque: "10.000", unidade: "kg" as const },
-    { nome: `${PREFIXO} Café`, preco: "6.50", estoque: "50.000", unidade: "un" as const },
+    // Pão: preço R$5, custo R$2 → margem 60%
+    { nome: `${PREFIXO} Pão`, preco: "5.00", custo: "2.00", estoque: "100.000", unidade: "un" as const },
+    // Bolo: preço R$32/kg, custo R$12/kg
+    { nome: `${PREFIXO} Bolo (kg)`, preco: "32.00", custo: "12.00", estoque: "10.000", unidade: "kg" as const },
+    // Café: preço R$6.50, custo R$1.80
+    { nome: `${PREFIXO} Café`, preco: "6.50", custo: "1.80", estoque: "50.000", unidade: "un" as const },
+    // Produto SEM custo: deve usar preço como fallback (compat com produtos legados)
+    { nome: `${PREFIXO} Coxinha`, preco: "8.00", custo: "0.00", estoque: "30.000", unidade: "un" as const },
   ];
   for (let i = 0; i < seed.length; i++) {
     const s = seed[i];
@@ -259,8 +265,10 @@ async function setup() {
         slug: `${s.nome.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${STAMP}-${i}`,
         categoriaId: cat.id,
         preco: s.preco,
+        custoUnitario: s.custo,
         estoqueAtual: s.estoque,
         estoqueMinimo: "5.000",
+        estoqueMaximo: "200.000",
         unidadeMedida: s.unidade,
         ativo: true,
         disponivelHoje: true,
@@ -268,7 +276,7 @@ async function setup() {
       .returning({ id: produtos.id });
     created.produtoIds.push(p.id);
   }
-  ok("3 produtos [TESTE] criados", created.produtoIds.length === 3);
+  ok("4 produtos [TESTE] criados (3 com custo + 1 sem)", created.produtoIds.length === 4);
 }
 
 // ---------------------------------------------------------------------------
@@ -570,11 +578,11 @@ async function cenarioPerdaSimples() {
   const [, pBolo] = created.produtoIds;
   const p = await db.query.produtos.findFirst({ where: eq(produtos.id, pBolo) });
   const antes = Number(p?.estoqueAtual ?? 0);
-  const preco = Number(p?.preco ?? 0);
+  const custoEfetivo = Number(getCustoEfetivo(p!));
 
   const r = await registrarPerdaInline(pBolo, 1.5, "Vencimento — teste", created.usuarioId);
   near("estoque pós-perda (1.5 kg a menos)", r.post, antes - 1.5, 0.001);
-  near("valor da perda = 1.5 × preço", Number(r.valor), 1.5 * preco, 0.01);
+  near("valor da perda = 1.5 × custo efetivo", Number(r.valor), 1.5 * custoEfetivo, 0.01);
 
   // Perda registrada e identificável
   const perdas = await db.query.perdasEstoque.findMany({
@@ -592,6 +600,7 @@ async function cenarioPerdaMaiorQueEstoque() {
   const [, , pCafe] = created.produtoIds;
   const p = await db.query.produtos.findFirst({ where: eq(produtos.id, pCafe) });
   const antes = Number(p?.estoqueAtual ?? 0);
+  const custoEfetivo = Number(getCustoEfetivo(p!));
   const tentar = antes + 999;
 
   const r = await registrarPerdaInline(pCafe, tentar, "Acidente catastrófico", created.usuarioId);
@@ -599,9 +608,9 @@ async function cenarioPerdaMaiorQueEstoque() {
 
   // O valor da perda usa a qtd informada (não a clampada) — comportamento atual do código.
   near(
-    "valor da perda usa qtd informada (preserva o registro contábil real)",
+    "valor da perda usa qtd informada × custo efetivo",
     Number(r.valor),
-    tentar * Number(p?.preco ?? 0),
+    tentar * custoEfetivo,
     0.01,
   );
 
@@ -815,6 +824,35 @@ async function cenarioFinalizarComandaVazia(sessaoId: number) {
     .where(eq(comandas.id, c.id));
 }
 
+async function cenarioPerdaUsaCusto() {
+  group("Cenário 14: valor da perda usa custo de aquisição, não preço de venda");
+  // Pão: preço R$5, custo R$2. Perda de 4 unidades:
+  //   - antes (bug): 4 × R$5 = R$20 (preço de venda)
+  //   - agora (correto): 4 × R$2 = R$8 (custo real)
+  const [pPao] = created.produtoIds;
+  const r = await registrarPerdaInline(pPao, 4, "Validade vencida (custo test)", created.usuarioId);
+  near("valor da perda usa custo (4 × R$ 2.00)", Number(r.valor), 8.0, 0.01);
+
+  // Coxinha (produto SEM custo cadastrado): deve cair no fallback do preço
+  const pCox = created.produtoIds[3];
+  const r2 = await registrarPerdaInline(pCox, 2, "Sem custo cadastrado (fallback)", created.usuarioId);
+  near("sem custo cadastrado, usa preço como fallback (2 × R$ 8.00)", Number(r2.valor), 16.0, 0.01);
+
+  // getCustoEfetivo isolado (helper puro)
+  ok(
+    "getCustoEfetivo retorna custo quando > 0",
+    Number(getCustoEfetivo({ custoUnitario: "12.00", preco: "32.00" })) === 12,
+  );
+  ok(
+    "getCustoEfetivo cai no preço quando custo = 0",
+    Number(getCustoEfetivo({ custoUnitario: "0", preco: "8.00" })) === 8,
+  );
+  ok(
+    "getCustoEfetivo cai no preço quando custo é null",
+    Number(getCustoEfetivo({ custoUnitario: null, preco: "5.00" })) === 5,
+  );
+}
+
 async function cenarioLedgerConsistencia() {
   group("Cenário 13: consistência do ledger (anterior+delta=posterior)");
   for (const pid of created.produtoIds) {
@@ -928,6 +966,7 @@ async function main() {
     }
     await cenarioFechamentoComResumo(sessaoId);
     await cenarioImpedeFechamentoComAbertas();
+    await cenarioPerdaUsaCusto();
     await cenarioLedgerConsistencia();
   } catch (err) {
     fail++;

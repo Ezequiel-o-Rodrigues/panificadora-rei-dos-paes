@@ -91,10 +91,16 @@ export const produtos = pgTable(
       .references(() => categorias.id, { onDelete: "restrict" }),
     descricao: text("descricao"),
     preco: numeric("preco", { precision: 10, scale: 2 }).notNull(),
+    custoUnitario: numeric("custo_unitario", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
     estoqueAtual: numeric("estoque_atual", { precision: 12, scale: 3 })
       .notNull()
       .default("0"),
     estoqueMinimo: numeric("estoque_minimo", { precision: 12, scale: 3 })
+      .notNull()
+      .default("0"),
+    estoqueMaximo: numeric("estoque_maximo", { precision: 12, scale: 3 })
       .notNull()
       .default("0"),
     unidadeMedida: unidadeMedidaEnum("unidade_medida").notNull().default("un"),

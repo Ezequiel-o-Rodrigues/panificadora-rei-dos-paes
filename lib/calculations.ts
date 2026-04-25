@@ -65,6 +65,19 @@ export function calcValorPerda(
   return toMoney(toNum(quantidadePerda) * toNum(precoUnitario));
 }
 
+/**
+ * Retorna o custo efetivo para cálculo de perdas/margem.
+ * Se o produto tem custoUnitario > 0 cadastrado, usa ele; senão cai no preço
+ * de venda (mantém o comportamento antigo / conservador).
+ */
+export function getCustoEfetivo(produto: {
+  custoUnitario?: string | number | null;
+  preco: string | number;
+}): string | number {
+  const custo = toNum(produto.custoUnitario ?? 0);
+  return custo > 0 ? custo : produto.preco;
+}
+
 export function calcComissaoGarcom(
   totalVendas: string | number,
   taxaComissao: string | number

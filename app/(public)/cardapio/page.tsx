@@ -41,6 +41,7 @@ async function getCardapio(): Promise<CardapioCategoria[]> {
         imagemUrl: p.imagemUrl,
         unidadeMedida: p.unidadeMedida,
         destaque: p.destaque,
+        esgotado: Number(p.estoqueAtual) <= 0,
       })),
     }));
   } catch {
