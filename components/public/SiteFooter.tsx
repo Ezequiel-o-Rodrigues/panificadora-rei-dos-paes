@@ -2,12 +2,15 @@ import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 import { InstagramIcon } from "@/components/shared/icons";
 import { TENANT_CONFIG } from "@/lib/config/tenant";
+import { getTenantRuntime, splitHorario } from "@/lib/config/tenant-runtime";
 
-export function SiteFooter() {
-  const instagramHandle = TENANT_CONFIG.contato.instagram;
+export async function SiteFooter() {
+  const tenant = await getTenantRuntime();
+  const instagramHandle = tenant.contato.instagram;
   const instagramUrl = instagramHandle
     ? `https://www.instagram.com/${instagramHandle.replace(/^@/, "")}/`
     : null;
+  const horarios = splitHorario(tenant.horarioFuncionamento);
   return (
     <footer className="relative mt-24 overflow-hidden bg-gradient-to-b from-onyx-900 via-onyx-950 to-onyx-900 text-ivory-100">
       <div
@@ -48,8 +51,14 @@ export function SiteFooter() {
             Horário
           </h4>
           <ul className="mt-4 space-y-2 text-sm text-onyx-200">
-            <li>Seg a Sáb · 6h às 20h</li>
-            <li>Domingo · 7h às 13h</li>
+            {horarios.length > 0 ? (
+              horarios.map((h, i) => <li key={i}>{h}</li>)
+            ) : (
+              <>
+                <li>Seg a Sáb · 6h às 20h</li>
+                <li>Domingo · 7h às 13h</li>
+              </>
+            )}
           </ul>
         </div>
         <div>
@@ -57,15 +66,15 @@ export function SiteFooter() {
             Contato
           </h4>
           <ul className="mt-4 space-y-2 text-sm text-onyx-200">
+            {tenant.contato.endereco && <li>{tenant.contato.endereco}</li>}
+            {tenant.contato.telefone && <li>Tel.: {tenant.contato.telefone}</li>}
+            {tenant.contato.whatsapp && <li>WhatsApp: {tenant.contato.whatsapp}</li>}
             <li>Pronta entrega no balcão</li>
-            {TENANT_CONFIG.contato.telefone && (
-              <li>{TENANT_CONFIG.contato.telefone}</li>
-            )}
           </ul>
         </div>
       </div>
       <div className="relative border-t border-onyx-800/70 py-6 text-center text-xs text-onyx-400">
-        © {new Date().getFullYear()} {TENANT_CONFIG.nome}. Todos os direitos reservados.
+        © {new Date().getFullYear()} {tenant.nome}. Todos os direitos reservados.
       </div>
     </footer>
   );

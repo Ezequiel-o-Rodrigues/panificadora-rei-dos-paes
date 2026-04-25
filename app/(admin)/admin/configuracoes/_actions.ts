@@ -30,6 +30,7 @@ export async function updateConfig(
       });
 
     revalidatePath("/admin/configuracoes");
+    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Erro ao atualizar configuração:", error);
