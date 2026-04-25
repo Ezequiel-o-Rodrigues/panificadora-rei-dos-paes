@@ -9,16 +9,18 @@ type LogoProps = {
   hideSubtitle?: boolean;
   compact?: boolean;
   size?: number;
+  onLight?: boolean;
 };
 
 const LOGO_FILE = path.join(process.cwd(), "public", "images", "logo.png");
-const HAS_LOGO_FILE = existsSync(LOGO_FILE);
+export const HAS_LOGO_FILE = existsSync(LOGO_FILE);
 
 export function Logo({
   className,
   hideSubtitle,
   compact,
   size = 44,
+  onLight,
 }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-3", className)}>
@@ -36,11 +38,21 @@ export function Logo({
       )}
       {!compact && (
         <div className="flex flex-col leading-tight">
-          <span className="font-display text-lg font-bold uppercase tracking-wide text-ivory-50">
+          <span
+            className={cn(
+              "font-display text-lg font-bold uppercase tracking-wide",
+              onLight ? "text-onyx-900" : "text-ivory-50",
+            )}
+          >
             {TENANT_CONFIG.nome}
           </span>
           {!hideSubtitle && (
-            <span className="text-[9px] font-medium uppercase tracking-[0.3em] text-onyx-300">
+            <span
+              className={cn(
+                "text-[9px] font-medium uppercase tracking-[0.3em]",
+                onLight ? "text-onyx-600" : "text-onyx-300",
+              )}
+            >
               {TENANT_CONFIG.subtitulo}
             </span>
           )}

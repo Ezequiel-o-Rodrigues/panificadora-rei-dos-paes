@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Clock, Flame, MapPin } from "lucide-react";
 import { InstagramIcon } from "@/components/shared/icons";
+import { HAS_LOGO_FILE } from "@/components/shared/Logo";
 import { TENANT_CONFIG, getHeroContent } from "@/lib/config/tenant";
 
 export default function HomePage() {
@@ -95,8 +97,21 @@ export default function HomePage() {
             <div className="relative aspect-square w-full max-w-md">
               <div className="absolute inset-6 rounded-[40%_60%_70%_30%/40%_50%_60%_50%] bg-gradient-to-br from-flame-300 via-flame-500 to-rust-700 shadow-flame animate-flicker" />
               <div className="absolute inset-12 rounded-[50%_50%_40%_60%/60%_40%_60%_40%] bg-gradient-to-br from-flame-200/40 to-rust-600/30 mix-blend-overlay" />
-              <div className="absolute inset-0 flex items-center justify-center text-[11rem] leading-none drop-shadow-2xl">
-                {hero.emojis[0]}
+              <div className="absolute inset-0 flex items-center justify-center drop-shadow-2xl">
+                {HAS_LOGO_FILE ? (
+                  <Image
+                    src={TENANT_CONFIG.logoUrl}
+                    alt={TENANT_CONFIG.nome}
+                    width={360}
+                    height={360}
+                    priority
+                    className="h-[78%] w-[78%] rounded-full object-cover ring-4 ring-flame-500/40 shadow-flame"
+                  />
+                ) : (
+                  <span className="text-[11rem] leading-none">
+                    {hero.emojis[0]}
+                  </span>
+                )}
               </div>
               <div className="absolute -left-4 top-1/3 rotate-[-12deg] text-6xl drop-shadow-2xl">
                 {hero.emojis[1]}
