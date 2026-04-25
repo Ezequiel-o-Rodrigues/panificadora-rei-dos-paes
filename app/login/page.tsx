@@ -48,21 +48,21 @@ export default async function LoginPage({
         <div className="flex justify-center">
           <Logo />
         </div>
-        <h1 className="mt-8 text-center font-display text-3xl font-bold text-ivory-50">
+        <h1 className="mt-8 text-center font-display text-3xl font-bold text-onyx-900">
           Entrar no painel
         </h1>
-        <p className="mt-1 text-center text-sm text-onyx-200">
+        <p className="mt-1 text-center text-sm text-onyx-500">
           Acesso restrito a funcionários.
         </p>
         {params.error && (
-          <div className="mt-6 rounded-xl border border-rust-500/50 bg-rust-500/15 px-4 py-3 text-sm text-rust-400">
+          <div className="mt-6 rounded-xl border border-rust-500/50 bg-rust-500/10 px-4 py-3 text-sm text-rust-600">
             Email ou senha inválidos.
           </div>
         )}
         <form action={handleLogin} className="mt-6 space-y-4">
           <div>
             <label
-              className="text-sm font-medium text-onyx-100"
+              className="text-sm font-medium text-onyx-700"
               htmlFor="email"
             >
               Email
@@ -73,13 +73,13 @@ export default async function LoginPage({
               type="email"
               required
               autoComplete="email"
-              className="mt-1 block w-full rounded-xl border border-onyx-600 bg-onyx-800/70 px-4 py-2.5 text-sm text-ivory-50 shadow-sm outline-none ring-flame-500/40 transition placeholder:text-onyx-400 focus:border-flame-500 focus:ring-2"
+              className="mt-1 block w-full rounded-xl border border-flame-500/20 bg-white/80 px-4 py-2.5 text-sm text-onyx-900 shadow-sm outline-none ring-flame-500/40 transition placeholder:text-onyx-400 focus:border-flame-500 focus:ring-2"
               placeholder="voce@exemplo.com.br"
             />
           </div>
           <div>
             <label
-              className="text-sm font-medium text-onyx-100"
+              className="text-sm font-medium text-onyx-700"
               htmlFor="password"
             >
               Senha
@@ -90,19 +90,19 @@ export default async function LoginPage({
               type="password"
               required
               autoComplete="current-password"
-              className="mt-1 block w-full rounded-xl border border-onyx-600 bg-onyx-800/70 px-4 py-2.5 text-sm text-ivory-50 shadow-sm outline-none ring-flame-500/40 transition focus:border-flame-500 focus:ring-2"
+              className="mt-1 block w-full rounded-xl border border-flame-500/20 bg-white/80 px-4 py-2.5 text-sm text-onyx-900 shadow-sm outline-none ring-flame-500/40 transition focus:border-flame-500 focus:ring-2"
             />
           </div>
           <button
             type="submit"
-            className="mt-2 w-full rounded-xl bg-gradient-to-br from-flame-400 via-flame-500 to-rust-600 px-5 py-3 text-sm font-bold text-onyx-950 shadow-flame transition hover:shadow-glow-lg"
+            className="mt-2 w-full rounded-xl bg-gradient-to-br from-flame-400 via-flame-500 to-rust-500 px-5 py-3 text-sm font-bold text-white shadow-flame transition hover:shadow-glow-lg"
           >
             Entrar
           </button>
         </form>
         <Link
           href="/"
-          className="mt-6 block text-center text-xs text-onyx-300 transition hover:text-flame-400"
+          className="mt-6 block text-center text-xs text-onyx-500 transition hover:text-flame-600"
         >
           ← Voltar ao site
         </Link>

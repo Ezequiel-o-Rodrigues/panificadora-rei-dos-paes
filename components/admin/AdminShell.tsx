@@ -16,7 +16,7 @@ function ShellInner({
   const { collapsed } = useSidebar();
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="admin-scope flex min-h-dvh bg-onyx-950 text-ivory-50">
       <aside
         className={cn(
           "sticky top-0 hidden h-dvh shrink-0 border-r border-onyx-800/70 bg-onyx-950/80 backdrop-blur-xl md:flex md:flex-col transition-all duration-300 overflow-hidden",

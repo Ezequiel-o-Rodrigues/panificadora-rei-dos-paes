@@ -9,11 +9,15 @@ export function SiteFooter() {
     ? `https://www.instagram.com/${instagramHandle.replace(/^@/, "")}/`
     : null;
   return (
-    <footer className="mt-24 border-t border-onyx-800/70 bg-gradient-to-b from-transparent via-onyx-950 to-onyx-900">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+    <footer className="relative mt-24 overflow-hidden bg-gradient-to-b from-onyx-900 via-onyx-950 to-onyx-900 text-ivory-100">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[120%] -translate-x-1/2 rounded-full bg-flame-500/20 blur-3xl"
+      />
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div className="space-y-4">
           <Logo />
-          <p className="max-w-xs text-sm text-onyx-300">
+          <p className="max-w-xs text-sm text-onyx-200">
             {TENANT_CONFIG.metatags.descricao}
           </p>
           {instagramUrl && (
@@ -33,10 +37,10 @@ export function SiteFooter() {
             Navegação
           </h4>
           <ul className="mt-4 space-y-2 text-sm text-onyx-200">
-            <li><Link href="/" className="transition hover:text-flame-400">Início</Link></li>
-            <li><Link href="/cardapio" className="transition hover:text-flame-400">Cardápio</Link></li>
-            <li><Link href="/sobre" className="transition hover:text-flame-400">Sobre</Link></li>
-            <li><Link href="/contato" className="transition hover:text-flame-400">Contato</Link></li>
+            <li><Link href="/" className="transition hover:text-flame-300">Início</Link></li>
+            <li><Link href="/cardapio" className="transition hover:text-flame-300">Cardápio</Link></li>
+            <li><Link href="/sobre" className="transition hover:text-flame-300">Sobre</Link></li>
+            <li><Link href="/contato" className="transition hover:text-flame-300">Contato</Link></li>
           </ul>
         </div>
         <div>
@@ -60,7 +64,7 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-onyx-800/70 py-6 text-center text-xs text-onyx-400">
+      <div className="relative border-t border-onyx-800/70 py-6 text-center text-xs text-onyx-400">
         © {new Date().getFullYear()} {TENANT_CONFIG.nome}. Todos os direitos reservados.
       </div>
     </footer>
