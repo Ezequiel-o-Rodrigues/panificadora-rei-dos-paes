@@ -329,15 +329,37 @@ export async function adicionarItem(
     }
 
     const qtd = parsed.data.quantidade;
-    const subtotal = calcSubtotal(qtd, produto.preco);
 
-    await db.insert(itensComanda).values({
-      comandaId,
-      produtoId: produto.id,
-      quantidade: toQty(qtd),
-      precoUnitario: produto.preco,
-      subtotal,
+    // Se já existe um item desse produto na comanda, consolidamos somando
+    // a quantidade — assim a comanda mostra "8× Pão Francês" em vez de
+    // 8 linhas duplicadas. Mantemos o precoUnitario do registro original.
+    const existente = await db.query.itensComanda.findFirst({
+      where: and(
+        eq(itensComanda.comandaId, comandaId),
+        eq(itensComanda.produtoId, produto.id),
+      ),
     });
+
+    if (existente) {
+      const novaQtd = Number(existente.quantidade) + qtd;
+      const novoSubtotal = calcSubtotal(novaQtd, existente.precoUnitario);
+      await db
+        .update(itensComanda)
+        .set({
+          quantidade: toQty(novaQtd),
+          subtotal: novoSubtotal,
+        })
+        .where(eq(itensComanda.id, existente.id));
+    } else {
+      const subtotal = calcSubtotal(qtd, produto.preco);
+      await db.insert(itensComanda).values({
+        comandaId,
+        produtoId: produto.id,
+        quantidade: toQty(qtd),
+        precoUnitario: produto.preco,
+        subtotal,
+      });
+    }
 
     await recalcularTotalComanda(comandaId);
 

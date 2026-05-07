@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
+  Loader2,
   Lock,
   PackagePlus,
   PanelLeftClose,
@@ -50,6 +51,32 @@ interface SessaoPDV {
   dataAbertura: Date | string;
 }
 
+// Unidades em que 1 clique = 1 unidade (sem diálogo).
+// Para kg/g/litro/ml/metro mantemos o diálogo para digitar a quantidade.
+const UNIDADES_CONTAVEIS = new Set([
+  "un",
+  "fatia",
+  "pacote",
+  "porcao",
+  "combo",
+]);
+
+function isUnidadeContavel(unidade: string) {
+  return UNIDADES_CONTAVEIS.has(unidade);
+}
+
+type ItemOtimista = {
+  tempId: string;
+  comandaId: number;
+  produtoId: number;
+  produtoNome: string;
+  unidadeMedida: string;
+  quantidade: number;
+  precoUnitario: string;
+  subtotal: number;
+  confirmed: boolean;
+};
+
 interface PDVInterfaceProps {
   sessao: SessaoPDV;
   comandasAbertas: ComandaPDV[];
@@ -87,6 +114,11 @@ export function PDVInterface({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [closeCaixaOpen, setCloseCaixaOpen] = useState(false);
 
+  // UI otimista: itens que aparecem na comanda imediatamente,
+  // antes do servidor confirmar. Limpos quando o servidor responde via refresh.
+  const [optimisticItems, setOptimisticItems] = useState<ItemOtimista[]>([]);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const comandaAtiva = useMemo(
     () => comandasAbertas.find((c) => c.id === comandaAtivaId) ?? null,
     [comandasAbertas, comandaAtivaId],
@@ -112,13 +144,101 @@ export function PDVInterface({
     });
   }, [produtos, search, categoriaFiltro]);
 
+  // Quando o servidor confirma os itens (props mudam), descartamos otimistas
+  // já marcados como confirmados. Otimistas ainda em voo permanecem.
+  const itensServerKey = useMemo(() => {
+    if (!comandaAtiva) return "";
+    return (
+      comandaAtiva.itens.map((i) => i.id).join(",") +
+      "|" +
+      comandaAtiva.itensLivres.map((i) => i.id).join(",")
+    );
+  }, [comandaAtiva]);
+
+  useEffect(() => {
+    setOptimisticItems((prev) => prev.filter((o) => !o.confirmed));
+  }, [itensServerKey]);
+
+  const optimisticPorComanda = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const o of optimisticItems) {
+      map.set(o.comandaId, (map.get(o.comandaId) ?? 0) + o.subtotal);
+    }
+    return map;
+  }, [optimisticItems]);
+
+  const optimisticItensAtiva = useMemo(() => {
+    if (!comandaAtiva) return [] as ItemOtimista[];
+    return optimisticItems.filter((o) => o.comandaId === comandaAtiva.id);
+  }, [optimisticItems, comandaAtiva]);
+
+  // Linhas consolidadas da comanda: agrupa itens por produtoId (real + otimista)
+  // de modo que 8 cliques no mesmo produto virem "8× Pão Francês" em vez de
+  // 8 linhas duplicadas. Itens livres não são agrupados (descrição livre).
+  type LinhaProduto = {
+    key: string;
+    produtoId: number;
+    produtoNome: string;
+    unidadeMedida: string;
+    precoUnitario: string;
+    quantidade: number;
+    subtotal: number;
+    realItemIds: number[];
+    pendente: boolean;
+  };
+
+  const linhasProduto = useMemo<LinhaProduto[]>(() => {
+    if (!comandaAtiva) return [];
+    const map = new Map<number, LinhaProduto>();
+
+    for (const item of comandaAtiva.itens) {
+      const linha = map.get(item.produtoId) ?? {
+        key: `p-${item.produtoId}`,
+        produtoId: item.produtoId,
+        produtoNome: item.produto.nome,
+        unidadeMedida: item.produto.unidadeMedida,
+        precoUnitario: item.precoUnitario,
+        quantidade: 0,
+        subtotal: 0,
+        realItemIds: [],
+        pendente: false,
+      };
+      linha.quantidade += Number(item.quantidade);
+      linha.subtotal += Number(item.subtotal);
+      linha.realItemIds.push(item.id);
+      map.set(item.produtoId, linha);
+    }
+
+    for (const o of optimisticItensAtiva) {
+      const linha = map.get(o.produtoId) ?? {
+        key: `p-${o.produtoId}`,
+        produtoId: o.produtoId,
+        produtoNome: o.produtoNome,
+        unidadeMedida: o.unidadeMedida,
+        precoUnitario: o.precoUnitario,
+        quantidade: 0,
+        subtotal: 0,
+        realItemIds: [],
+        pendente: false,
+      };
+      linha.quantidade += o.quantidade;
+      linha.subtotal += o.subtotal;
+      if (!o.confirmed) linha.pendente = true;
+      map.set(o.produtoId, linha);
+    }
+
+    return Array.from(map.values());
+  }, [comandaAtiva, optimisticItensAtiva]);
+
   const subtotalComanda = useMemo(() => {
     if (!comandaAtiva) return 0;
-    return [
-      ...comandaAtiva.itens.map((i) => Number(i.subtotal)),
-      ...comandaAtiva.itensLivres.map((i) => Number(i.subtotal)),
-    ].reduce((acc, n) => acc + n, 0);
-  }, [comandaAtiva]);
+    const itensSubtotal = linhasProduto.reduce((acc, l) => acc + l.subtotal, 0);
+    const livresSubtotal = comandaAtiva.itensLivres.reduce(
+      (acc, i) => acc + Number(i.subtotal),
+      0,
+    );
+    return itensSubtotal + livresSubtotal;
+  }, [comandaAtiva, linhasProduto]);
 
   const gorjetaAtual = useMemo(() => {
     if (!comandaAtiva) return 0;
@@ -143,31 +263,78 @@ export function PDVInterface({
     });
   }
 
+  function scheduleRefresh() {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      startTransition(() => {
+        router.refresh();
+      });
+    }, 80);
+  }
+
+  async function quickAddProduto(produto: ProdutoPDV, quantidade: number) {
+    if (!comandaAtiva) {
+      toast.error("Crie uma comanda antes de adicionar itens");
+      return;
+    }
+    if (Number(produto.estoqueAtual) <= 0) {
+      toast.warning(`${produto.nome}: estoque zerado, vendendo mesmo assim`);
+    }
+
+    const comandaId = comandaAtiva.id;
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const subtotal = quantidade * Number(produto.preco);
+
+    setOptimisticItems((prev) => [
+      ...prev,
+      {
+        tempId,
+        comandaId,
+        produtoId: produto.id,
+        produtoNome: produto.nome,
+        unidadeMedida: produto.unidadeMedida,
+        quantidade,
+        precoUnitario: produto.preco,
+        subtotal,
+        confirmed: false,
+      },
+    ]);
+
+    const formData = new FormData();
+    formData.set("produtoId", String(produto.id));
+    formData.set("quantidade", String(quantidade));
+
+    const result = await adicionarItem(comandaId, formData);
+
+    if (!result.success) {
+      setOptimisticItems((prev) => prev.filter((o) => o.tempId !== tempId));
+      toast.error(result.error ?? "Erro ao adicionar item");
+      return;
+    }
+
+    setOptimisticItems((prev) =>
+      prev.map((o) => (o.tempId === tempId ? { ...o, confirmed: true } : o)),
+    );
+    scheduleRefresh();
+  }
+
   function handleSelecionarProduto(produto: ProdutoPDV) {
     if (!comandaAtiva) {
       toast.error("Crie uma comanda antes de adicionar itens");
       return;
     }
-    setProdutoSelecionado(produto);
+    if (isUnidadeContavel(produto.unidadeMedida)) {
+      void quickAddProduto(produto, 1);
+    } else {
+      setProdutoSelecionado(produto);
+    }
   }
 
   function handleAdicionarProduto(quantidade: number) {
-    if (!comandaAtiva || !produtoSelecionado) return;
+    if (!produtoSelecionado) return;
     const produto = produtoSelecionado;
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("produtoId", String(produto.id));
-      formData.set("quantidade", String(quantidade));
-
-      const result = await adicionarItem(comandaAtiva.id, formData);
-      if (result.success) {
-        toast.success(`${produto.nome} adicionado`);
-        setProdutoSelecionado(null);
-        router.refresh();
-      } else {
-        toast.error(result.error ?? "Erro ao adicionar item");
-      }
-    });
+    setProdutoSelecionado(null);
+    void quickAddProduto(produto, quantidade);
   }
 
   function handleRemoverItemProduto(itemId: number) {
@@ -180,6 +347,23 @@ export function PDVInterface({
         router.refresh();
       } else {
         toast.error(result.error ?? "Erro ao remover");
+      }
+    });
+  }
+
+  function handleRemoverLinhaProduto(realItemIds: number[]) {
+    if (!comandaAtiva || realItemIds.length === 0) return;
+    const comandaId = comandaAtiva.id;
+    startTransition(async () => {
+      const results = await Promise.all(
+        realItemIds.map((id) => removerItemComanda(id, comandaId)),
+      );
+      const erro = results.find((r) => !r.success);
+      if (erro) {
+        toast.error(erro.error ?? "Erro ao remover");
+      } else {
+        toast.success("Item removido");
+        router.refresh();
       }
     });
   }
@@ -280,20 +464,24 @@ export function PDVInterface({
 
       {/* Abas de comandas */}
       <div className="flex flex-wrap items-center gap-2">
-        {comandasAbertas.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setComandaAtivaId(c.id)}
-            className={cn(
-              "rounded-xl border px-4 py-2 text-sm font-semibold transition",
-              c.id === comandaAtivaId
-                ? "border-flame-500/60 bg-flame-500/15 text-flame-300"
-                : "border-onyx-700 bg-onyx-800/60 text-onyx-200 hover:border-onyx-600",
-            )}
-          >
-            #{c.numero} — {formatBRL(c.valorTotal)}
-          </button>
-        ))}
+        {comandasAbertas.map((c) => {
+          const valorOtim = optimisticPorComanda.get(c.id) ?? 0;
+          const totalDisplay = Number(c.valorTotal) + valorOtim;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setComandaAtivaId(c.id)}
+              className={cn(
+                "rounded-xl border px-4 py-2 text-sm font-semibold transition",
+                c.id === comandaAtivaId
+                  ? "border-flame-500/60 bg-flame-500/15 text-flame-300"
+                  : "border-onyx-700 bg-onyx-800/60 text-onyx-200 hover:border-onyx-600",
+              )}
+            >
+              #{c.numero} — {formatBRL(totalDisplay)}
+            </button>
+          );
+        })}
         <Button
           variant="outline"
           size="sm"
@@ -368,11 +556,12 @@ export function PDVInterface({
                     <button
                       key={p.id}
                       onClick={() => handleSelecionarProduto(p)}
-                      disabled={semEstoque || !comandaAtiva || isPending}
+                      disabled={!comandaAtiva}
                       className={cn(
                         "group relative flex flex-col overflow-hidden rounded-2xl border border-onyx-700 bg-onyx-800/60 text-left transition",
                         "hover:border-flame-500/60 hover:bg-onyx-800 hover:shadow-lg hover:shadow-flame-500/10 active:scale-[0.98]",
                         "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-onyx-700 disabled:hover:shadow-none",
+                        semEstoque && "opacity-80",
                       )}
                     >
                       <div className="relative aspect-square w-full">
@@ -473,7 +662,7 @@ export function PDVInterface({
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                {comandaAtiva.itens.length === 0 &&
+                {linhasProduto.length === 0 &&
                 comandaAtiva.itensLivres.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-onyx-400">
                     <Receipt className="h-6 w-6 text-onyx-500" />
@@ -481,37 +670,58 @@ export function PDVInterface({
                   </div>
                 ) : (
                   <ul className="space-y-2">
-                    {comandaAtiva.itens.map((item) => (
-                      <li
-                        key={`p-${item.id}`}
-                        className="flex items-start justify-between gap-2 rounded-xl border border-onyx-800 bg-onyx-800/40 p-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-ivory-50">
-                            {item.produto.nome}
+                    {linhasProduto.map((linha) => {
+                      const apenasOtimista = linha.realItemIds.length === 0;
+                      const isUn = linha.unidadeMedida === "un" ||
+                        isUnidadeContavel(linha.unidadeMedida);
+                      return (
+                        <li
+                          key={linha.key}
+                          className={cn(
+                            "flex items-start justify-between gap-2 rounded-xl border p-3 transition",
+                            apenasOtimista
+                              ? "border-flame-500/30 bg-flame-500/5"
+                              : "border-onyx-800 bg-onyx-800/40",
+                          )}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 truncate text-sm font-semibold text-ivory-50">
+                              {linha.pendente && (
+                                <Loader2 className="h-3 w-3 shrink-0 animate-spin text-flame-400" />
+                              )}
+                              <span className="truncate">{linha.produtoNome}</span>
+                            </div>
+                            <div className="mt-0.5 text-xs text-onyx-400">
+                              {linha.quantidade.toFixed(isUn ? 0 : 3)}
+                              {" "}
+                              {linha.unidadeMedida}
+                              {" × "}
+                              {formatBRL(linha.precoUnitario)}
+                            </div>
                           </div>
-                          <div className="mt-0.5 text-xs text-onyx-400">
-                            {Number(item.quantidade).toFixed(
-                              item.produto.unidadeMedida === "un" ? 0 : 3,
-                            )}{" "}
-                            × {formatBRL(item.precoUnitario)}
+                          <div className="flex items-center gap-2">
+                            <div className="text-sm font-bold text-flame-400">
+                              {formatBRL(linha.subtotal)}
+                            </div>
+                            <button
+                              onClick={() =>
+                                handleRemoverLinhaProduto(linha.realItemIds)
+                              }
+                              disabled={isPending || apenasOtimista}
+                              className="rounded-lg p-1 text-onyx-400 transition hover:bg-rust-500/15 hover:text-rust-400 disabled:opacity-50 cursor-pointer"
+                              aria-label="Remover item"
+                              title={
+                                linha.quantidade > 1
+                                  ? `Remover todas as ${linha.quantidade} unidades`
+                                  : "Remover"
+                              }
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-bold text-flame-400">
-                            {formatBRL(item.subtotal)}
-                          </div>
-                          <button
-                            onClick={() => handleRemoverItemProduto(item.id)}
-                            disabled={isPending}
-                            className="rounded-lg p-1 text-onyx-400 transition hover:bg-rust-500/15 hover:text-rust-400 disabled:opacity-50 cursor-pointer"
-                            aria-label="Remover item"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                     {comandaAtiva.itensLivres.map((item) => (
                       <li
                         key={`l-${item.id}`}
@@ -554,7 +764,6 @@ export function PDVInterface({
                     variant="outline"
                     size="sm"
                     onClick={() => setItemLivreOpen(true)}
-                    disabled={isPending}
                   >
                     <PackagePlus className="h-4 w-4" />
                     Item livre

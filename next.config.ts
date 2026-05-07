@@ -2,6 +2,7 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: process.env.BUILD_TARGET === "desktop" ? "standalone" : undefined,
   outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
