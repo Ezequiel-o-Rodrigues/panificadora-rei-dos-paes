@@ -2,6 +2,7 @@
   "name": "panificadora-rei-dos-paes",
   "version": "0.1.0",
   "private": true,
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
@@ -13,7 +14,10 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local db/seed.ts",
     "migrate:validate": "tsx --env-file=.env.local scripts/validate-migration.ts",
-    "desktop:dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"next dev --turbopack\" \"wait-on tcp:3000 && node desktop/launch.cjs\""
+    "desktop:dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"next dev --turbopack\" \"wait-on tcp:3000 && node desktop/launch.cjs\"",
+    "desktop:build": "cross-env BUILD_TARGET=desktop next build && node desktop/prepare-standalone.cjs",
+    "desktop:dist": "npm run desktop:build && electron-builder --win",
+    "desktop:pack": "npm run desktop:build && electron-builder --win --dir"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -51,7 +55,7 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.183.1",
     "concurrently": "^9.2.1",
-    "dotenv": "^17.4.1",
+    "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.10",
     "electron": "^33.4.11",
     "electron-builder": "^26.8.1",
@@ -61,5 +65,41 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "com.reidospaes.painel",
+    "productName": "Painel Padaria",
+    "copyright": "Copyright © 2026 Rei dos Pães",
+    "directories": {
+      "output": "dist-desktop",
+      "buildResources": "desktop/build-resources"
+    },
+    "files": [
+      "desktop/main.cjs",
+      ".next/standalone/**/*",
+      "package.json",
+      "!**/.env*",
+      "!.git/**/*",
+      "!node_modules/**/*"
+    ],
+    "asar": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Painel Padaria"
+    }
   }
 }

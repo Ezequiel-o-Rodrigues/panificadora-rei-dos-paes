@@ -337,20 +337,6 @@ export function PDVInterface({
     void quickAddProduto(produto, quantidade);
   }
 
-  function handleRemoverItemProduto(itemId: number) {
-    if (!comandaAtiva) return;
-    const comandaId = comandaAtiva.id;
-    startTransition(async () => {
-      const result = await removerItemComanda(itemId, comandaId);
-      if (result.success) {
-        toast.success("Item removido");
-        router.refresh();
-      } else {
-        toast.error(result.error ?? "Erro ao remover");
-      }
-    });
-  }
-
   function handleRemoverLinhaProduto(realItemIds: number[]) {
     if (!comandaAtiva || realItemIds.length === 0) return;
     const comandaId = comandaAtiva.id;

@@ -3,6 +3,7 @@
 > concurrently -k -n NEXT,ELECTRON -c blue,magenta "next dev --turbopack" "wait-on tcp:3000 && node desktop/launch.cjs"
 
 [ELECTRON] 
+[ELECTRON] [2026-05-07T21:29:28.814Z] [env] carregado de C:\Users\EZEQUIEL\Documents\p-rojetos\panificadora\panificadora-rei-dos-paes\.env.local — 10 vars
 [NEXT]    ▲ Next.js 15.5.15 (Turbopack)
 [NEXT]    - Local:        http://localhost:3000
 [NEXT]    - Network:      http://192.168.134.1:3000
@@ -11,10 +12,10 @@
 [NEXT]      · optimizePackageImports
 [NEXT] 
 [NEXT]  ✓ Starting...
-[NEXT]  ✓ Compiled middleware in 412ms
-[NEXT]  ✓ Ready in 2.5s
+[NEXT]  ✓ Compiled middleware in 442ms
+[NEXT]  ✓ Ready in 2.4s
 [NEXT]  ○ Compiling /admin ...
-[NEXT]  ✓ Compiled /admin in 12s
+[NEXT]  ✓ Compiled /admin in 13.9s
 [NEXT] The width(-1) and height(-1) of chart should be greater than 0,
 [NEXT]        please check the style of container, or the props width(100%) and height(100%),
 [NEXT]        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
@@ -27,57 +28,26 @@
 [NEXT]        please check the style of container, or the props width(100%) and height(100%),
 [NEXT]        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
 [NEXT]        height and width.
-[NEXT]  GET /admin 200 in 15805ms
+[NEXT]  GET /admin 200 in 18912ms
 [NEXT]  ○ Compiling /admin/caixa ...
-[NEXT]  ✓ Compiled /admin/caixa in 1081ms
-[NEXT]  GET /admin/caixa 200 in 2003ms
+[NEXT]  ✓ Compiled /admin/caixa in 1717ms
+[NEXT]  GET /admin/caixa 200 in 3248ms
+[NEXT]  GET /admin/caixa 200 in 860ms
 [NEXT]  ○ Compiling /admin/caixa/[sessaoId] ...
-[NEXT]  ✓ Compiled /admin/caixa/[sessaoId] in 1373ms
-[NEXT]  GET /admin/caixa/3 200 in 3623ms
-[NEXT]  POST /admin/caixa/3 200 in 7518ms
-[NEXT]  POST /admin/caixa/3 200 in 2671ms
-[NEXT]  GET /admin/caixa/3 200 in 1597ms
-[NEXT]  POST /admin/caixa/3 200 in 3355ms
-[NEXT]  GET /admin/caixa/3 200 in 1466ms
-[NEXT]  POST /admin/caixa/3 200 in 4304ms
-[NEXT]  POST /admin/caixa/3 200 in 3582ms
-[NEXT]  GET /admin/caixa/3 200 in 1650ms
-[NEXT]  POST /admin/caixa/3 200 in 3490ms
-[NEXT]  POST /admin/caixa/3 200 in 2471ms
-[NEXT]  POST /admin/caixa/3 200 in 2580ms
-[NEXT]  POST /admin/caixa/3 200 in 2928ms
-[NEXT]  GET /admin/caixa/3 200 in 2321ms
-[NEXT]  POST /admin/caixa/3 200 in 3204ms
-[NEXT]  GET /admin/caixa/3 200 in 2290ms
-[NEXT]  GET /admin/caixa/3 200 in 1436ms
-[NEXT]  GET /admin/caixa/3 200 in 1598ms
-[NEXT]  GET /admin/caixa/3 200 in 1435ms
-[NEXT]  POST /admin/caixa/3 200 in 5843ms
-[NEXT]  ✓ Compiled in 504ms
-[NEXT]  ✓ Compiled /admin/caixa/[sessaoId] in 145ms
-[NEXT]  GET /admin/caixa/3 200 in 1161ms
-[NEXT]  ✓ Compiled in 179ms
-[NEXT]  ✓ Compiled in 203ms
-[NEXT]  ✓ Compiled in 268ms
-[NEXT]  POST /admin/caixa/3 200 in 4450ms
-[NEXT]  GET /admin/caixa/3 200 in 1557ms
-[NEXT]  POST /admin/caixa/3 200 in 4043ms
-[NEXT]  GET /admin/caixa/3 200 in 1664ms
-[NEXT]  POST /admin/caixa/3 200 in 4566ms
-[NEXT]  POST /admin/caixa/3 200 in 3028ms
-[NEXT]  GET /admin/caixa/3 200 in 1697ms
-[NEXT]  POST /admin/caixa/3 200 in 3778ms
-[NEXT]  GET /admin/caixa/3 200 in 1502ms
-[NEXT]  POST /admin/caixa/3 200 in 3340ms
-[NEXT]  GET /admin/caixa/3 200 in 1596ms
-[NEXT]  POST /admin/caixa/3 200 in 2323ms
-[NEXT]  GET /admin/caixa/3 200 in 1162ms
-[NEXT]  POST /admin/caixa/3 200 in 3146ms
-[NEXT]  POST /admin/caixa/3 200 in 3166ms
-[NEXT]  POST /admin/caixa/3 200 in 3477ms
-[NEXT]  POST /admin/caixa/3 200 in 2611ms
-[NEXT]  GET /admin/caixa/3 200 in 1240ms
-[NEXT]  GET /admin/caixa/3 200 in 1305ms
-[NEXT]  GET /admin/caixa/3 200 in 1385ms
-[NEXT]  GET /admin/caixa/3 200 in 1290ms
-[NEXT]  POST /admin/caixa/3 200 in 5748ms
+[NEXT]  ✓ Compiled /admin/caixa/[sessaoId] in 2.1s
+[NEXT]  GET /admin/caixa/3 200 in 4879ms
+[NEXT]  POST /admin/caixa/3 200 in 3203ms
+[NEXT]  GET /admin/caixa/3 200 in 2169ms
+[NEXT]  POST /admin/caixa/3 200 in 3584ms
+[NEXT]  POST /admin/caixa/3 200 in 2849ms
+[NEXT]  POST /admin/caixa/3 200 in 2784ms
+[NEXT]  POST /admin/caixa/3 200 in 2877ms
+[NEXT]  POST /admin/caixa/3 200 in 3158ms
+[NEXT]  GET /admin/caixa/3 200 in 2150ms
+[NEXT]  GET /admin/caixa/3 200 in 1684ms
+[NEXT]  GET /admin/caixa/3 200 in 1614ms
+[NEXT]  GET /admin/caixa/3 200 in 1676ms
+[NEXT]  GET /admin/caixa/3 200 in 1546ms
+[ELECTRON] wait-on tcp:3000 && node desktop/launch.cjs exited with code 0
+--> Sending SIGTERM to other processes..
+[NEXT] next dev --turbopack exited with code 1

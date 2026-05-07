@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# electron / desktop build outputs
+/dist-desktop/
+/desktop/last-run.log
+/desktop/build-resources/icon.ico

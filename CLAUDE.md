@@ -176,11 +176,24 @@ next.config.ts              output: 'standalone' ativa SO em BUILD_TARGET=deskto
 - Vercel + Neon + Vercel Blob configurados, domínio com SSL automático, auto-deploy
 - Detalhes em [DEPLOY.md](DEPLOY.md)
 
-### App desktop — Phase 1 (dev mode funcional)
-- `npm run desktop:dev` abre janela do admin (Electron 33 com Next.js dev rodando junto via concurrently)
-- F12 toggle DevTools (não abrem por padrão — clientes não veem DevTools nem terminal)
-- Atalho na área de trabalho via VBS wrapper (sem terminal visível). Target: `wscript.exe "...desktop\start-dev.vbs"`
-- **Hack importante**: VSCode/Claude Code propagam `ELECTRON_RUN_AS_NODE=1` pra child processes, fazendo electron rodar em modo Node em vez de modo app. [desktop/launch.cjs](desktop/launch.cjs) deleta essa env var antes de spawnar Electron. **Não remover esse launcher.**
+### App desktop — Phases 1 + 2 funcionais (validado 2026-05-07)
+**Phase 1 — dev mode** (`npm run desktop:dev`): Electron 33 + Next dev concurrently. F12 toggle DevTools.
+
+**Phase 2 — build de produção empacotado** (validado por duplo-clique no `.exe`):
+- `npm run desktop:build` — `BUILD_TARGET=desktop next build` (output:standalone) + [desktop/prepare-standalone.cjs](desktop/prepare-standalone.cjs) (copia `public/` e `.next/static/` que o Next standalone não copia sozinho)
+- `npm run desktop:pack` — pasta `dist-desktop/win-unpacked/` (testar sem instalador)
+- `npm run desktop:dist` — instalador `dist-desktop/Painel Padaria Setup 0.1.0.exe` (~97MB, NSIS x64)
+- Em produção [desktop/main.cjs](desktop/main.cjs) spawna `node server.js` (Next standalone) com `ELECTRON_RUN_AS_NODE=1` na porta 38473 e janela carrega de lá → Vercel pode estar 100% fora que app continua funcionando
+- Parser `.env` inline no `main.cjs` (não depende de `node_modules` da raiz que é excluído do empacotamento)
+- Logs em runtime: `painel-padaria.log` ao lado do `.exe` instalado
+
+**Pré-requisito do Windows**: Modo de Desenvolvedor habilitado (Settings → Privacidade → Para desenvolvedores) — sem isso `electron-builder` falha extraindo links simbólicos.
+
+**`.env.local` não vai no instalador** (segurança). Após instalar, criar `.env.local` no diretório do `.exe` (`%LOCALAPPDATA%\Programs\Painel Padaria\.env.local`) com `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL=http://127.0.0.1:38473`, `AUTH_TRUST_HOST=true`. `main.cjs` mostra dialog amigável se faltar.
+
+**Hack importante**: VSCode/Claude Code propagam `ELECTRON_RUN_AS_NODE=1` pra child processes, fazendo electron rodar em modo Node em vez de modo app. [desktop/launch.cjs](desktop/launch.cjs) (usado em `desktop:dev`) e [desktop/main.cjs](desktop/main.cjs) deletam essa env var. **Não remover.**
+
+**Limitações conhecidas**: sem auto-update (distribuir `.exe` manualmente); ícone padrão do Electron (dropar `desktop/build-resources/icon.ico` e descomentar `build.win.icon` no package.json pra customizar); sem SQLite local — precisa de internet pro Neon.
 
 ### Migração de banco (em andamento — vide topo)
 - Projeto Neon novo em `sa-east-1` criado e populado via "Import data". Falta validar e virar.
@@ -192,16 +205,15 @@ next.config.ts              output: 'standalone' ativa SO em BUILD_TARGET=deskto
 
 ### 🔥 Bloqueadores / em andamento
 1. **Fechar a migração de banco** (Frente 1 acima): `npm run migrate:validate` → trocar URL `.env.local` → testar local → trocar URL Vercel → Redeploy → monitorar
-2. **Phase 2 do app desktop**: build de produção com electron-builder
-   - `BUILD_TARGET=desktop next build` produzindo standalone bundle
-   - `electron-builder.yml` com NSIS, ícone próprio, info da padaria
-   - Spawnar Next.js standalone server dentro do Electron em produção (em dev é `next dev`)
-   - First-run config wizard: tela inicial pedindo `DATABASE_URL` e nome da padaria, persiste em `%APPDATA%\PadariaApp\config.json`
-   - Auto-update via electron-updater + GitHub Releases (repo privado)
+
+### Phase 3 do app desktop (incremental — Phase 2 já feita)
+2. First-run config wizard: tela pedindo `DATABASE_URL` e nome da padaria na primeira execução, persiste em `%APPDATA%\PadariaApp\config.json` (hoje usuário precisa criar `.env.local` manual ao lado do `.exe`)
+3. Auto-update via `electron-updater` + GitHub Releases (repo privado) — hoje distribuição é manual
+4. Ícone customizado em `desktop/build-resources/icon.ico` + descomentar `build.win.icon` no package.json
+5. Splash screen enquanto o Next standalone sobe (3-5s de tela preta hoje)
 
 ### Performance (depois da migração de região)
-3. Trocar driver Neon de HTTP pra **WebSocket Pool** em modo desktop — corta handshake por query
-4. Adicionar script `desktop:start` que roda **build de produção** + Electron (em vez de `next dev`) — runtime 30-50% mais rápido
+6. Trocar driver Neon de HTTP pra **WebSocket Pool** em modo desktop — corta handshake por query
 
 ### Phase 3 — cardápio público multi-cliente
 5. Configurar Cloudflare Pages com `APP_MODE=public` pra deploy de cardápios públicos por subdomínio (`padariaX.ezzedev.com.br`, cada um com env vars próprias)
