@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   jsonb,
   numeric,
@@ -120,6 +121,8 @@ export const produtos = pgTable(
   },
   (t) => ({
     slugIdx: uniqueIndex("produtos_slug_idx").on(t.slug),
+    // Listagem do PDV filtra por ativo + disponivelHoje em toda renderização
+    pdvIdx: index("produtos_pdv_idx").on(t.ativo, t.disponivelHoje),
   })
 );
 
@@ -133,68 +136,100 @@ export const garcons = pgTable("garcons", {
     .defaultNow(),
 });
 
-export const caixaSessoes = pgTable("caixa_sessoes", {
-  id: serial("id").primaryKey(),
-  usuarioAberturaId: integer("usuario_abertura_id")
-    .notNull()
-    .references(() => usuarios.id),
-  usuarioFechamentoId: integer("usuario_fechamento_id").references(
-    () => usuarios.id
-  ),
-  valorAbertura: numeric("valor_abertura", { precision: 10, scale: 2 })
-    .notNull()
-    .default("0"),
-  valorFechamento: numeric("valor_fechamento", { precision: 10, scale: 2 }),
-  observacoes: text("observacoes"),
-  status: statusCaixaEnum("status").notNull().default("aberta"),
-  dataAbertura: timestamp("data_abertura", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  dataFechamento: timestamp("data_fechamento", { withTimezone: true }),
-});
+export const caixaSessoes = pgTable(
+  "caixa_sessoes",
+  {
+    id: serial("id").primaryKey(),
+    usuarioAberturaId: integer("usuario_abertura_id")
+      .notNull()
+      .references(() => usuarios.id),
+    usuarioFechamentoId: integer("usuario_fechamento_id").references(
+      () => usuarios.id
+    ),
+    valorAbertura: numeric("valor_abertura", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
+    valorFechamento: numeric("valor_fechamento", { precision: 10, scale: 2 }),
+    observacoes: text("observacoes"),
+    status: statusCaixaEnum("status").notNull().default("aberta"),
+    dataAbertura: timestamp("data_abertura", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    dataFechamento: timestamp("data_fechamento", { withTimezone: true }),
+  },
+  (t) => ({
+    // getSessaoAberta filtra por status='aberta' a cada render do PDV
+    statusIdx: index("caixa_sessoes_status_idx").on(t.status),
+  })
+);
 
-export const comandas = pgTable("comandas", {
-  id: serial("id").primaryKey(),
-  numero: integer("numero").notNull(),
-  status: statusComandaEnum("status").notNull().default("aberta"),
-  valorTotal: numeric("valor_total", { precision: 10, scale: 2 })
-    .notNull()
-    .default("0"),
-  taxaGorjeta: numeric("taxa_gorjeta", { precision: 10, scale: 2 })
-    .notNull()
-    .default("0"),
-  formaPagamento: formaPagamentoEnum("forma_pagamento"),
-  garcomId: integer("garcom_id").references(() => garcons.id),
-  caixaSessaoId: integer("caixa_sessao_id").references(() => caixaSessoes.id),
-  usuarioAberturaId: integer("usuario_abertura_id")
-    .notNull()
-    .references(() => usuarios.id),
-  usuarioFechamentoId: integer("usuario_fechamento_id").references(
-    () => usuarios.id
-  ),
-  observacoes: text("observacoes"),
-  dataAbertura: timestamp("data_abertura", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  dataFechamento: timestamp("data_fechamento", { withTimezone: true }),
-});
+export const comandas = pgTable(
+  "comandas",
+  {
+    id: serial("id").primaryKey(),
+    numero: integer("numero").notNull(),
+    status: statusComandaEnum("status").notNull().default("aberta"),
+    valorTotal: numeric("valor_total", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
+    taxaGorjeta: numeric("taxa_gorjeta", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
+    formaPagamento: formaPagamentoEnum("forma_pagamento"),
+    garcomId: integer("garcom_id").references(() => garcons.id),
+    caixaSessaoId: integer("caixa_sessao_id").references(() => caixaSessoes.id),
+    usuarioAberturaId: integer("usuario_abertura_id")
+      .notNull()
+      .references(() => usuarios.id),
+    usuarioFechamentoId: integer("usuario_fechamento_id").references(
+      () => usuarios.id
+    ),
+    observacoes: text("observacoes"),
+    dataAbertura: timestamp("data_abertura", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    dataFechamento: timestamp("data_fechamento", { withTimezone: true }),
+  },
+  (t) => ({
+    // Listagem de comandas abertas por sessão (cada renderização do PDV)
+    sessaoStatusIdx: index("comandas_sessao_status_idx").on(
+      t.caixaSessaoId,
+      t.status
+    ),
+    // getProximoNumeroComanda usa MAX(numero)
+    numeroIdx: index("comandas_numero_idx").on(t.numero),
+  })
+);
 
-export const itensComanda = pgTable("itens_comanda", {
-  id: serial("id").primaryKey(),
-  comandaId: integer("comanda_id")
-    .notNull()
-    .references(() => comandas.id, { onDelete: "cascade" }),
-  produtoId: integer("produto_id")
-    .notNull()
-    .references(() => produtos.id),
-  quantidade: numeric("quantidade", { precision: 12, scale: 3 }).notNull(),
-  precoUnitario: numeric("preco_unitario", { precision: 10, scale: 2 }).notNull(),
-  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
-  observacao: text("observacao"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const itensComanda = pgTable(
+  "itens_comanda",
+  {
+    id: serial("id").primaryKey(),
+    comandaId: integer("comanda_id")
+      .notNull()
+      .references(() => comandas.id, { onDelete: "cascade" }),
+    produtoId: integer("produto_id")
+      .notNull()
+      .references(() => produtos.id),
+    quantidade: numeric("quantidade", { precision: 12, scale: 3 }).notNull(),
+    precoUnitario: numeric("preco_unitario", { precision: 10, scale: 2 }).notNull(),
+    subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+    observacao: text("observacao"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    // Recalc de subtotal lê todos itens de uma comanda
+    comandaIdx: index("itens_comanda_comanda_idx").on(t.comandaId),
+    // UNIQUE habilita ON CONFLICT (comanda_id, produto_id) na consolidação do
+    // adicionarItem (1 linha por produto na comanda)
+    comandaProdutoUq: uniqueIndex("itens_comanda_comanda_produto_uq").on(
+      t.comandaId,
+      t.produtoId
+    ),
+  })
+);
 
 export const itensLivres = pgTable("itens_livres", {
   id: serial("id").primaryKey(),

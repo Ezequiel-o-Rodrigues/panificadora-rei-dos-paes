@@ -3,7 +3,7 @@
 > concurrently -k -n NEXT,ELECTRON -c blue,magenta "next dev --turbopack" "wait-on tcp:3000 && node desktop/launch.cjs"
 
 [ELECTRON] 
-[ELECTRON] [2026-05-07T21:29:28.814Z] [env] carregado de C:\Users\EZEQUIEL\Documents\p-rojetos\panificadora\panificadora-rei-dos-paes\.env.local — 10 vars
+[ELECTRON] [2026-05-09T20:12:08.071Z] [env] carregado de C:\Users\EZEQUIEL\Documents\p-rojetos\panificadora\panificadora-rei-dos-paes\.env.local — 11 vars
 [NEXT]    ▲ Next.js 15.5.15 (Turbopack)
 [NEXT]    - Local:        http://localhost:3000
 [NEXT]    - Network:      http://192.168.134.1:3000
@@ -12,10 +12,10 @@
 [NEXT]      · optimizePackageImports
 [NEXT] 
 [NEXT]  ✓ Starting...
-[NEXT]  ✓ Compiled middleware in 442ms
-[NEXT]  ✓ Ready in 2.4s
+[NEXT]  ✓ Compiled middleware in 345ms
+[NEXT]  ✓ Ready in 2.1s
 [NEXT]  ○ Compiling /admin ...
-[NEXT]  ✓ Compiled /admin in 13.9s
+[NEXT]  ✓ Compiled /admin in 14.7s
 [NEXT] The width(-1) and height(-1) of chart should be greater than 0,
 [NEXT]        please check the style of container, or the props width(100%) and height(100%),
 [NEXT]        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
@@ -28,26 +28,26 @@
 [NEXT]        please check the style of container, or the props width(100%) and height(100%),
 [NEXT]        or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
 [NEXT]        height and width.
-[NEXT]  GET /admin 200 in 18912ms
+[NEXT]  GET /admin 200 in 20261ms
 [NEXT]  ○ Compiling /admin/caixa ...
-[NEXT]  ✓ Compiled /admin/caixa in 1717ms
-[NEXT]  GET /admin/caixa 200 in 3248ms
-[NEXT]  GET /admin/caixa 200 in 860ms
+[NEXT]  ✓ Compiled /admin/caixa in 1432ms
+[NEXT]  GET /admin/caixa 200 in 2014ms
 [NEXT]  ○ Compiling /admin/caixa/[sessaoId] ...
-[NEXT]  ✓ Compiled /admin/caixa/[sessaoId] in 2.1s
-[NEXT]  GET /admin/caixa/3 200 in 4879ms
-[NEXT]  POST /admin/caixa/3 200 in 3203ms
-[NEXT]  GET /admin/caixa/3 200 in 2169ms
-[NEXT]  POST /admin/caixa/3 200 in 3584ms
-[NEXT]  POST /admin/caixa/3 200 in 2849ms
-[NEXT]  POST /admin/caixa/3 200 in 2784ms
-[NEXT]  POST /admin/caixa/3 200 in 2877ms
-[NEXT]  POST /admin/caixa/3 200 in 3158ms
-[NEXT]  GET /admin/caixa/3 200 in 2150ms
-[NEXT]  GET /admin/caixa/3 200 in 1684ms
-[NEXT]  GET /admin/caixa/3 200 in 1614ms
-[NEXT]  GET /admin/caixa/3 200 in 1676ms
-[NEXT]  GET /admin/caixa/3 200 in 1546ms
+[NEXT]  ✓ Compiled /admin/caixa/[sessaoId] in 2s
+[NEXT]  GET /admin/caixa/3 200 in 3903ms
+[NEXT]  POST /admin/caixa/3 200 in 1105ms
+[NEXT]  GET /admin/caixa/3 200 in 923ms
+[NEXT]  POST /admin/caixa/3 200 in 1428ms
+[NEXT]  GET /admin/caixa/3 200 in 1114ms
+[NEXT]  POST /admin/caixa/3 200 in 1573ms
+[NEXT]  GET /admin/caixa/3 200 in 1050ms
+[NEXT]  POST /admin/caixa/3 200 in 1242ms
+[NEXT]  POST /admin/caixa/3 200 in 1499ms
+[NEXT]  POST /admin/caixa/3 200 in 1598ms
+[NEXT]  GET /admin/caixa/3 200 in 866ms
+[NEXT]  GET /admin/caixa/3 200 in 760ms
+[NEXT]  GET /admin/caixa/3 200 in 744ms
+[NEXT]  POST /admin/caixa/3 200 in 1897ms
 [ELECTRON] wait-on tcp:3000 && node desktop/launch.cjs exited with code 0
 --> Sending SIGTERM to other processes..
 [NEXT] next dev --turbopack exited with code 1
