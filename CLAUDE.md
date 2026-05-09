@@ -4,19 +4,23 @@ Sistema completo de gestão para panificadora. **Em produção** com a padaria d
 
 ---
 
-## 🚧 Estado em 2026-05-07 — leia antes de qualquer coisa
+## 🚧 Estado em 2026-05-09 — leia antes de qualquer coisa
 
 Tem duas frentes em paralelo. Antes de partir pra qualquer outro trabalho, cheque onde estão.
 
-### Frente 1 — Migração do banco (Neon `us-east-1` → `sa-east-1`)
+### Frente 1 — Migração do banco (Neon `us-east-1` → `sa-east-1`) — **EM ANDAMENTO**
 
 Motivação: PDV está lento (POSTs ~3-4s) porque o DB está em Virginia e cada query atravessa o Atlântico (~200ms RTT). São Paulo deve cair pra ~30ms.
 
-Onde estamos:
-- ✅ Projeto Neon novo `sistema_PDV` criado em `aws-sa-east-1`
-- ✅ Import via "Import data" do Neon completou (branch `import-2026-05-07T...`, compute `ep-calm-tree-ac5odvve`)
-- ⏳ **Falta**: rodar `npm run migrate:validate` (compara contagem de linhas), trocar `DATABASE_URL` no `.env.local` + Vercel, redeploy, monitorar 24-48h
-- 📅 Só deletar projeto antigo após 1 semana sem incidente
+Onde estamos (2026-05-09):
+- ✅ Projeto Neon `sistema_PDV` em `aws-sa-east-1`, branch `import-2026-05-07T...` (compute `ep-calm-tree-ac5odvve`) populada via Import data
+- ✅ **Sacrifício aceito**: dados de 2026-05-07 14:54 → 2026-05-09 13:34 (10 comandas, 27 itens, 40 movimentações) **NÃO** vieram pra sa-east-1. Decisão consciente do Ezequiel pra evitar mais um ciclo de import. Relatórios desse intervalo ficarão incompletos.
+- ✅ **Tier 1 Tarefa 1 do `docs/PERFORMANCE_PLAN.md`**: aplicada a migração 0004 (6 índices) no sa-east-1 via [scripts/finalize-new-db.ts](scripts/finalize-new-db.ts). Também consolidou 1 grupo de duplicatas em `itens_comanda` que veio no import.
+- ✅ `.env.local` local apontando pro sa-east-1; testado em `npm run dev` E na build empacotada (atalho "Painel Padaria (sa-east-1 TESTE)" na área de trabalho). PDV ficou visivelmente fluido.
+- ✅ `vercel.json` adiciona `regions: ["gru1"]` pra mover Functions também pra São Paulo (essencial — sem isso, Vercel us-east-1 → DB sa-east-1 ficaria pior).
+- ⏳ **Falta**: trocar `DATABASE_URL` na **Vercel** dashboard + push pra disparar redeploy → monitorar 24-48h. Atualizar `.env.local` ao lado do `Painel Padaria.exe` instalado **na PC da padaria** (acesso presencial ou remoto via TeamViewer/AnyDesk).
+- ⏳ **3 senhas expostas em chat aguardando rotação**: a do antigo us-east-1 (`npg_LoN5WlT9tMkd`), a do projeto vazio us-east-1 (`npg_qV1OBFw9hcAJ`), e a do sa-east-1 ativo (`npg_1vGpel9UguIh`). Rotacionar após estabilizar.
+- 📅 Deletar projeto antigo Neon após 1 semana sem incidente
 
 ### Frente 2 — App desktop (Electron)
 
@@ -36,9 +40,9 @@ Detalhes estratégicos (per-client install, evitar Vercel Pro, escolha de stack)
 - **Diretório local**: `c:\Users\EZEQUIEL\Documents\p-rojetos\panificadora\panificadora-rei-dos-paes`
 - **Repositório**: https://github.com/Ezequiel-o-Rodrigues/panificadora-rei-dos-paes (branch `main`)
 - **Produção web (no ar)**: https://reidospaes.ezzedev.com.br
-- **Banco ativo (us-east-1)**: Neon `ep-withered-bird-amciydr9-pooler.c-5.us-east-1.aws.neon.tech` — usado pela Vercel até a migração ser virada
-- **Banco novo (sa-east-1)**: Neon projeto `sistema_PDV`, compute `ep-calm-tree-ac5odvve` — recebeu o import; ainda não é o ativo
-- **Deploy web**: Vercel (auto-deploy a cada `git push origin main`)
+- **Banco ATIVO no dev local + desktop empacotado (sa-east-1)**: Neon projeto `sistema_PDV`, compute `ep-calm-tree-ac5odvve-pooler.sa-east-1.aws.neon.tech`. Schema com migração 0004 aplicada (6 índices), zero duplicatas em `itens_comanda`.
+- **Banco LEGADO (us-east-1)**: Neon `ep-withered-bird-amciydr9-pooler.c-5.us-east-1.aws.neon.tech` — ainda usado pela Vercel até virar (e pelo `.exe` instalado na padaria). Tem 5 grupos de duplicatas em `itens_comanda` (não fizemos consolidação aqui porque ele será descontinuado).
+- **Deploy web**: Vercel (auto-deploy a cada `git push origin main`). `vercel.json` força região `gru1` (São Paulo).
 - **DNS**: domínio `ezzedev.com.br` no Cloudflare → CNAME `reidospaes` (DNS only) → Vercel
 - **Storage de imagens**: Vercel Blob (com fallback para filesystem local em dev)
 
