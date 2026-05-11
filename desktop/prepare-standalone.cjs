@@ -39,11 +39,12 @@ copyDir(
 // db/index.ts faz `eval('require')` de ws e drizzle-orm/neon-serverless
 // pra ativar o Pool driver no Electron. O Next tracer não enxerga essas
 // requires, então copiamos manualmente. Sem isso, o standalone falha em
-// runtime com "Cannot find module 'ws'".
-const POOL_DEPS = [
-  "ws",
-  "drizzle-orm/neon-serverless",
-];
+// runtime com "Cannot find module 'ws'" ou "drizzle-orm/entity.js".
+//
+// Sobrescrevemos o drizzle-orm inteiro porque o tracer só incluiu os
+// arquivos do neon-http; o neon-serverless precisa de outros (entity.js
+// etc.) que ficam fora do trace.
+const POOL_DEPS = ["ws", "drizzle-orm"];
 for (const dep of POOL_DEPS) {
   copyDir(
     path.join(root, "node_modules", dep),
