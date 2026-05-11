@@ -36,4 +36,19 @@ copyDir(
   path.join(standalone, ".next", "static"),
 );
 
+// db/index.ts faz `eval('require')` de ws e drizzle-orm/neon-serverless
+// pra ativar o Pool driver no Electron. O Next tracer não enxerga essas
+// requires, então copiamos manualmente. Sem isso, o standalone falha em
+// runtime com "Cannot find module 'ws'".
+const POOL_DEPS = [
+  "ws",
+  "drizzle-orm/neon-serverless",
+];
+for (const dep of POOL_DEPS) {
+  copyDir(
+    path.join(root, "node_modules", dep),
+    path.join(standalone, "node_modules", dep),
+  );
+}
+
 console.log("[prepare-standalone] OK — standalone pronto para empacotamento.");
