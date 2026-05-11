@@ -4,7 +4,32 @@ Sistema completo de gestão para panificadora. **Em produção** com a padaria d
 
 ---
 
-## 🚧 Estado em 2026-05-09 — leia antes de qualquer coisa
+## 🛑 PEGAR AQUI EM 2026-05-12 — sessão interrompida no meio do Task 5
+
+**Onde paramos**: Tier 1 Tarefas 2 e 3 do `docs/PERFORMANCE_PLAN.md` foram aplicadas e estão em produção via commits `7315f73` (Vercel deploy OK). Task 5 (WebSocket Pool driver no desktop) está **parcial** — código pronto em origin/main mas o `.exe` de teste local ainda não foi validado.
+
+**Status do Task 5**:
+- ✅ `db/index.ts` usa `eval('require')` pra carregar Pool/ws lazy (esconde do bundler)
+- ✅ `next.config.ts` marca `ws` e `@neondatabase/serverless` como `serverExternalPackages`
+- ✅ `desktop/prepare-standalone.cjs` copia `ws` e `drizzle-orm` (inteiro) pro standalone — commit `551e308` (unpushed)
+- ❌ Não testado em runtime: o último `npm run desktop:pack` falhou com "Acesso negado: d3dcompiler_47.dll" porque o `.exe` de teste estava aberto. Precisa fechar antes de rebuildar.
+
+**Próximos passos pra amanhã** (ordem):
+1. **Push** o commit `551e308` (fix desktop standalone copy)
+2. **Fechar** todos os `Painel Padaria.exe` rodando (Task Manager se precisar)
+3. **Rebuild**: `npm run desktop:pack`
+4. **Recriar** `dist-desktop/win-unpacked/.env.local` (sa-east-1) — rebuild apaga ele
+5. **Testar** o atalho "Painel Padaria (sa-east-1 TESTE)" — abrir `/admin/caixa`, adicionar items, finalizar
+6. Se OK → considerar Tier 2 Tarefa 4 (eliminar `router.refresh`)
+7. Voltar pra finalizar tudo: rotacionar 3 senhas Neon expostas, deletar projeto antigo (após semana sem incidente — janela: ~2026-05-16)
+
+**Vercel produção está OK**: último deploy bem-sucedido inclui Tasks 2+3 + Task 5 (eval-require). O Pool driver não é exercitado lá (Vercel não tem `ELECTRON_RUN_AS_NODE=1`), então só usa HTTP — sem regressão.
+
+**PC da padaria está OK também**: ainda roda o `.exe` antigo apontando pro `DATABASE_URL` antigo. Está fora do escopo das mudanças de hoje — quando virarmos lá, vai usar o build novo (com Pool ativo).
+
+---
+
+## 🚧 Estado em 2026-05-09
 
 Tem duas frentes em paralelo. Antes de partir pra qualquer outro trabalho, cheque onde estão.
 
