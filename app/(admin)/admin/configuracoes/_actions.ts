@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { configuracoesSistema, garcons, comandas } from "@/db/schema";
 import { garcomSchema } from "@/lib/validators/garcom";
 import { eq, count } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -31,6 +31,9 @@ export async function updateConfig(
 
     revalidatePath("/admin/configuracoes");
     revalidatePath("/", "layout");
+    if (chave === "tipo_gorjeta" || chave === "taxa_gorjeta") {
+      revalidateTag("config-gorjeta");
+    }
     return { success: true };
   } catch (error) {
     console.error("Erro ao atualizar configuração:", error);
@@ -64,6 +67,7 @@ export async function createGarcom(
     });
 
     revalidatePath("/admin/configuracoes");
+    revalidateTag("garcons");
     return { success: true };
   } catch (error) {
     if (
@@ -106,6 +110,7 @@ export async function updateGarcom(
       .where(eq(garcons.id, id));
 
     revalidatePath("/admin/configuracoes");
+    revalidateTag("garcons");
     return { success: true };
   } catch (error) {
     if (
@@ -138,6 +143,7 @@ export async function toggleGarcomAtivo(id: number): Promise<ActionResult> {
       .where(eq(garcons.id, id));
 
     revalidatePath("/admin/configuracoes");
+    revalidateTag("garcons");
     return { success: true };
   } catch (error) {
     console.error("Erro ao alterar status do garçom:", error);
@@ -162,6 +168,7 @@ export async function deleteGarcom(id: number): Promise<ActionResult> {
     await db.delete(garcons).where(eq(garcons.id, id));
 
     revalidatePath("/admin/configuracoes");
+    revalidateTag("garcons");
     return { success: true };
   } catch (error) {
     console.error("Erro ao excluir garçom:", error);

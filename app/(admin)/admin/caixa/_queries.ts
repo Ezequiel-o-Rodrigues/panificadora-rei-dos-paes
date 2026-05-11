@@ -10,6 +10,7 @@ import {
   produtos,
 } from "@/db/schema";
 import { and, asc, desc, eq, inArray, max, sql } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 
 /**
  * Retorna a primeira (e única) sessão de caixa aberta, com dados do usuário.
@@ -183,51 +184,69 @@ export async function getResumoSessao(sessaoId: number): Promise<ResumoSessao> {
 /**
  * Produtos ativos e disponíveis para venda no PDV, com a categoria.
  * Ordenados por categoria (ordem/nome) e depois por nome do produto.
+ *
+ * Cacheado: invalida em mutações de produtos (revalidateTag('produtos')).
  */
-export async function getProdutosParaPDV() {
-  const results = await db.query.produtos.findMany({
-    where: and(eq(produtos.ativo, true), eq(produtos.disponivelHoje, true)),
-    with: { categoria: true },
-  });
+export const getProdutosParaPDV = unstable_cache(
+  async () => {
+    const results = await db.query.produtos.findMany({
+      where: and(eq(produtos.ativo, true), eq(produtos.disponivelHoje, true)),
+      with: { categoria: true },
+    });
 
-  return results.sort((a, b) => {
-    const ordemCompare = a.categoria.ordem - b.categoria.ordem;
-    if (ordemCompare !== 0) return ordemCompare;
-    const catCompare = a.categoria.nome.localeCompare(b.categoria.nome, "pt-BR");
-    if (catCompare !== 0) return catCompare;
-    return a.nome.localeCompare(b.nome, "pt-BR");
-  });
-}
+    return results.sort((a, b) => {
+      const ordemCompare = a.categoria.ordem - b.categoria.ordem;
+      if (ordemCompare !== 0) return ordemCompare;
+      const catCompare = a.categoria.nome.localeCompare(b.categoria.nome, "pt-BR");
+      if (catCompare !== 0) return catCompare;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+  },
+  ["produtos-para-pdv"],
+  { tags: ["produtos", "categorias"], revalidate: 3600 },
+);
 
 /**
  * Categorias ativas que têm pelo menos um produto ativo e disponível hoje.
+ *
+ * Cacheado: invalida quando produtos OU categorias mudam.
  */
-export async function getCategoriasComProdutos() {
-  const rows = await db
-    .selectDistinct({ categoriaId: produtos.categoriaId })
-    .from(produtos)
-    .where(and(eq(produtos.ativo, true), eq(produtos.disponivelHoje, true)));
+export const getCategoriasComProdutos = unstable_cache(
+  async () => {
+    const rows = await db
+      .selectDistinct({ categoriaId: produtos.categoriaId })
+      .from(produtos)
+      .where(and(eq(produtos.ativo, true), eq(produtos.disponivelHoje, true)));
 
-  const ids = rows.map((r) => r.categoriaId);
-  if (ids.length === 0) return [];
+    const ids = rows.map((r) => r.categoriaId);
+    if (ids.length === 0) return [];
 
-  const cats = await db.query.categorias.findMany({
-    where: and(eq(categorias.ativo, true), inArray(categorias.id, ids)),
-    orderBy: [asc(categorias.ordem), asc(categorias.nome)],
-  });
+    const cats = await db.query.categorias.findMany({
+      where: and(eq(categorias.ativo, true), inArray(categorias.id, ids)),
+      orderBy: [asc(categorias.ordem), asc(categorias.nome)],
+    });
 
-  return cats;
-}
+    return cats;
+  },
+  ["categorias-com-produtos"],
+  { tags: ["produtos", "categorias"], revalidate: 3600 },
+);
 
 /**
  * Garçons ativos para o select da comanda.
+ *
+ * Cacheado: invalida em mutações de garçons (revalidateTag('garcons')).
  */
-export async function getGarconsAtivos() {
-  return db.query.garcons.findMany({
-    where: eq(garcons.ativo, true),
-    orderBy: [asc(garcons.nome)],
-  });
-}
+export const getGarconsAtivos = unstable_cache(
+  async () => {
+    return db.query.garcons.findMany({
+      where: eq(garcons.ativo, true),
+      orderBy: [asc(garcons.nome)],
+    });
+  },
+  ["garcons-ativos"],
+  { tags: ["garcons"], revalidate: 3600 },
+);
 
 export type TipoGorjeta = "percentual" | "fixa" | "nenhuma";
 
@@ -240,31 +259,37 @@ export interface ConfigGorjeta {
 /**
  * Lê a configuração de gorjeta das chaves tipo_gorjeta e taxa_gorjeta.
  * Default seguro: nenhuma gorjeta.
+ *
+ * Cacheado: invalida em updateConfig (revalidateTag('config-gorjeta')).
  */
-export async function getConfigGorjeta(): Promise<ConfigGorjeta> {
-  const rows = await db
-    .select()
-    .from(configuracoesSistema)
-    .where(
-      inArray(configuracoesSistema.chave, ["tipo_gorjeta", "taxa_gorjeta"]),
-    );
+export const getConfigGorjeta = unstable_cache(
+  async (): Promise<ConfigGorjeta> => {
+    const rows = await db
+      .select()
+      .from(configuracoesSistema)
+      .where(
+        inArray(configuracoesSistema.chave, ["tipo_gorjeta", "taxa_gorjeta"]),
+      );
 
-  const map: Record<string, string> = {};
-  for (const row of rows) {
-    map[row.chave] = row.valor ?? "";
-  }
+    const map: Record<string, string> = {};
+    for (const row of rows) {
+      map[row.chave] = row.valor ?? "";
+    }
 
-  const tipoRaw = (map["tipo_gorjeta"] ?? "nenhuma").trim();
-  const taxaRaw = (map["taxa_gorjeta"] ?? "0").trim() || "0";
+    const tipoRaw = (map["tipo_gorjeta"] ?? "nenhuma").trim();
+    const taxaRaw = (map["taxa_gorjeta"] ?? "0").trim() || "0";
 
-  let tipo: TipoGorjeta = "nenhuma";
-  if (tipoRaw === "percentual" || tipoRaw === "fixa") tipo = tipoRaw;
+    let tipo: TipoGorjeta = "nenhuma";
+    if (tipoRaw === "percentual" || tipoRaw === "fixa") tipo = tipoRaw;
 
-  const taxaNum = Number(taxaRaw);
-  const taxa = Number.isFinite(taxaNum) ? taxaNum.toFixed(2) : "0.00";
+    const taxaNum = Number(taxaRaw);
+    const taxa = Number.isFinite(taxaNum) ? taxaNum.toFixed(2) : "0.00";
 
-  return { tipo, taxa };
-}
+    return { tipo, taxa };
+  },
+  ["config-gorjeta"],
+  { tags: ["config-gorjeta"], revalidate: 3600 },
+);
 
 // ---------------------------------------------------------------------------
 // Tipos derivados (úteis para os componentes client)

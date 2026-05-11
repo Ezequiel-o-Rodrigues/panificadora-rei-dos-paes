@@ -7,7 +7,6 @@ import {
   itensComanda,
   itensLivres,
   pagamentosPix,
-  produtos,
 } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import {
@@ -29,7 +28,7 @@ import {
   criarComandaSchema,
   finalizarComandaSchema,
 } from "@/lib/validators/comanda";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getConfigGorjeta, getProximoNumeroComanda } from "./_queries";
 
@@ -308,63 +307,56 @@ export async function adicionarItem(
       };
     }
 
-    const comanda = await db.query.comandas.findFirst({
-      where: eq(comandas.id, comandaId),
-    });
-    if (!comanda) {
-      return { success: false, error: "Comanda não encontrada." };
-    }
-    if (comanda.status !== "aberta") {
-      return { success: false, error: "Comanda não está aberta." };
-    }
+    const { produtoId } = parsed.data;
+    const qtd = toQty(parsed.data.quantidade);
 
-    const produto = await db.query.produtos.findFirst({
-      where: eq(produtos.id, parsed.data.produtoId),
-    });
-    if (!produto) {
-      return { success: false, error: "Produto não encontrado." };
-    }
-    if (!produto.ativo || !produto.disponivelHoje) {
-      return { success: false, error: "Produto indisponível no momento." };
-    }
-
-    const qtd = parsed.data.quantidade;
-
-    // Se já existe um item desse produto na comanda, consolidamos somando
-    // a quantidade — assim a comanda mostra "8× Pão Francês" em vez de
-    // 8 linhas duplicadas. Mantemos o precoUnitario do registro original.
-    const existente = await db.query.itensComanda.findFirst({
-      where: and(
-        eq(itensComanda.comandaId, comandaId),
-        eq(itensComanda.produtoId, produto.id),
+    // Multi-CTE: valida (comanda aberta + produto ativo/disponível) e faz
+    // upsert + recalc do valor_total em uma única roundtrip ao Postgres.
+    // ON CONFLICT na UNIQUE (comanda_id, produto_id) consolida em 1 linha;
+    // quando há conflito, somamos quantidade e recomputamos subtotal com
+    // o preco_unitario JÁ persistido (preserva preço histórico do item).
+    const result = await db.execute(sql`
+      WITH valido AS (
+        SELECT c.id AS comanda_id, c.caixa_sessao_id AS sessao_id,
+               p.id AS produto_id, p.preco
+        FROM comandas c
+        JOIN produtos p ON p.id = ${produtoId}
+        WHERE c.id = ${comandaId}
+          AND c.status = 'aberta'
+          AND p.ativo = true
+          AND p.disponivel_hoje = true
       ),
-    });
+      upsert AS (
+        INSERT INTO itens_comanda (comanda_id, produto_id, quantidade, preco_unitario, subtotal)
+        SELECT comanda_id, produto_id, ${qtd}::numeric, preco, preco * ${qtd}::numeric
+        FROM valido
+        ON CONFLICT (comanda_id, produto_id) DO UPDATE
+          SET quantidade = itens_comanda.quantidade + EXCLUDED.quantidade,
+              subtotal   = (itens_comanda.quantidade + EXCLUDED.quantidade)
+                           * itens_comanda.preco_unitario
+        RETURNING comanda_id
+      )
+      UPDATE comandas
+      SET valor_total = (
+        COALESCE((SELECT SUM(subtotal) FROM itens_comanda WHERE comanda_id = comandas.id), 0) +
+        COALESCE((SELECT SUM(subtotal) FROM itens_livres   WHERE comanda_id = comandas.id), 0)
+      )
+      FROM upsert
+      WHERE comandas.id = upsert.comanda_id
+      RETURNING comandas.id, comandas.caixa_sessao_id
+    `);
 
-    if (existente) {
-      const novaQtd = Number(existente.quantidade) + qtd;
-      const novoSubtotal = calcSubtotal(novaQtd, existente.precoUnitario);
-      await db
-        .update(itensComanda)
-        .set({
-          quantidade: toQty(novaQtd),
-          subtotal: novoSubtotal,
-        })
-        .where(eq(itensComanda.id, existente.id));
-    } else {
-      const subtotal = calcSubtotal(qtd, produto.preco);
-      await db.insert(itensComanda).values({
-        comandaId,
-        produtoId: produto.id,
-        quantidade: toQty(qtd),
-        precoUnitario: produto.preco,
-        subtotal,
-      });
+    const rows = (result as unknown as { rows: Array<{ caixa_sessao_id: number | null }> }).rows;
+    if (!rows || rows.length === 0) {
+      return {
+        success: false,
+        error: "Comanda fechada ou produto indisponível.",
+      };
     }
 
-    await recalcularTotalComanda(comandaId);
-
-    if (comanda.caixaSessaoId) {
-      revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
+    const sessaoId = rows[0]!.caixa_sessao_id;
+    if (sessaoId) {
+      revalidatePath(`/admin/caixa/${sessaoId}`);
     }
     return { success: true };
   } catch (error) {

@@ -6,7 +6,7 @@ import { produtoSchema } from "@/lib/validators/produto";
 import { slugify } from "@/lib/slugify";
 import { saveProductImage, deleteProductImage } from "@/lib/upload";
 import { eq, count } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 type ActionResult = { success: boolean; error?: string; archived?: boolean };
 
@@ -67,6 +67,7 @@ export async function createProduto(
 
     revalidatePath("/admin/produtos");
     revalidatePath("/cardapio");
+    revalidateTag("produtos");
     return { success: true };
   } catch (error) {
     if (
@@ -150,6 +151,7 @@ export async function updateProduto(
     revalidatePath("/admin/produtos");
     revalidatePath(`/admin/produtos/${id}`);
     revalidatePath("/cardapio");
+    revalidateTag("produtos");
     return { success: true };
   } catch (error) {
     if (
@@ -187,6 +189,7 @@ export async function toggleProdutoAtivo(
       .where(eq(produtos.id, id));
 
     revalidatePath("/admin/produtos");
+    revalidateTag("produtos");
     return { success: true };
   } catch (error) {
     console.error("Erro ao alterar status do produto:", error);
@@ -212,6 +215,7 @@ export async function toggleProdutoDisponivel(
       .where(eq(produtos.id, id));
 
     revalidatePath("/admin/produtos");
+    revalidateTag("produtos");
     return { success: true };
   } catch (error) {
     console.error("Erro ao alterar disponibilidade do produto:", error);
@@ -250,6 +254,7 @@ export async function deleteProduto(
       revalidatePath("/admin/produtos");
       revalidatePath("/admin/caixa");
       revalidatePath("/cardapio");
+      revalidateTag("produtos");
       return { success: true, archived: true };
     }
 
@@ -264,6 +269,7 @@ export async function deleteProduto(
     await db.delete(produtos).where(eq(produtos.id, id));
 
     revalidatePath("/admin/produtos");
+    revalidateTag("produtos");
     return { success: true };
   } catch (error) {
     console.error("Erro ao excluir produto:", error);

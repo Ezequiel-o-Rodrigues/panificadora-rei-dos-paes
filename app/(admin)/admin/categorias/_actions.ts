@@ -5,7 +5,7 @@ import { categorias, produtos } from "@/db/schema";
 import { categoriaSchema } from "@/lib/validators/categoria";
 import { slugify } from "@/lib/slugify";
 import { eq, count } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 type ActionResult = { success: boolean; error?: string };
 
@@ -39,6 +39,7 @@ export async function createCategoria(
     });
 
     revalidatePath("/admin/categorias");
+    revalidateTag("categorias");
     return { success: true };
   } catch (error) {
     if (
@@ -89,6 +90,7 @@ export async function updateCategoria(
       .where(eq(categorias.id, id));
 
     revalidatePath("/admin/categorias");
+    revalidateTag("categorias");
     return { success: true };
   } catch (error) {
     if (
@@ -123,6 +125,7 @@ export async function toggleCategoriaAtivo(
       .where(eq(categorias.id, id));
 
     revalidatePath("/admin/categorias");
+    revalidateTag("categorias");
     return { success: true };
   } catch (error) {
     console.error("Erro ao alterar status da categoria:", error);
@@ -147,6 +150,7 @@ export async function deleteCategoria(id: number): Promise<ActionResult> {
     await db.delete(categorias).where(eq(categorias.id, id));
 
     revalidatePath("/admin/categorias");
+    revalidateTag("categorias");
     return { success: true };
   } catch (error) {
     console.error("Erro ao excluir categoria:", error);
