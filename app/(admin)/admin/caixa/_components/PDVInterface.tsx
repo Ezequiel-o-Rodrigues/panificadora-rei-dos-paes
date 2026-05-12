@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -100,6 +100,23 @@ export function PDVInterface({
   const [isPending, startTransition] = useTransition();
   const { collapsed, toggle: toggleSidebar } = useSidebar();
 
+  // comandasAbertas vem como prop do server (page.tsx). Mantemos uma cópia
+  // local pra fazer merge incremental do retorno de cada action — assim
+  // não precisamos chamar router.refresh() depois de cada add/remove item.
+  // O server só re-renderiza em mudanças estruturais (criar/cancelar
+  // comanda), e nesse caso a prop nova entra via o useEffect abaixo.
+  const [comandasState, setComandasState] = useState<ComandaPDV[]>(comandasAbertas);
+
+  useEffect(() => {
+    setComandasState(comandasAbertas);
+  }, [comandasAbertas]);
+
+  const mergeComanda = useCallback((updated: ComandaPDV) => {
+    setComandasState((prev) =>
+      prev.map((c) => (c.id === updated.id ? updated : c)),
+    );
+  }, []);
+
   const [comandaAtivaId, setComandaAtivaId] = useState<number | null>(
     comandasAbertas[0]?.id ?? null,
   );
@@ -114,14 +131,14 @@ export function PDVInterface({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [closeCaixaOpen, setCloseCaixaOpen] = useState(false);
 
-  // UI otimista: itens que aparecem na comanda imediatamente,
-  // antes do servidor confirmar. Limpos quando o servidor responde via refresh.
+  // UI otimista: itens que aparecem na comanda imediatamente, antes do
+  // servidor confirmar. Quando a action retorna, removemos pelo tempId
+  // porque a comanda real já reflete a mudança.
   const [optimisticItems, setOptimisticItems] = useState<ItemOtimista[]>([]);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const comandaAtiva = useMemo(
-    () => comandasAbertas.find((c) => c.id === comandaAtivaId) ?? null,
-    [comandasAbertas, comandaAtivaId],
+    () => comandasState.find((c) => c.id === comandaAtivaId) ?? null,
+    [comandasState, comandaAtivaId],
   );
 
   // Se a comanda ativa deixar de existir (ex: foi finalizada/cancelada),
@@ -129,11 +146,11 @@ export function PDVInterface({
   useEffect(() => {
     if (
       comandaAtivaId !== null &&
-      !comandasAbertas.find((c) => c.id === comandaAtivaId)
+      !comandasState.find((c) => c.id === comandaAtivaId)
     ) {
-      setComandaAtivaId(comandasAbertas[0]?.id ?? null);
+      setComandaAtivaId(comandasState[0]?.id ?? null);
     }
-  }, [comandasAbertas, comandaAtivaId]);
+  }, [comandasState, comandaAtivaId]);
 
   const produtosFiltrados = useMemo(() => {
     const searchLower = search.trim().toLowerCase();
@@ -143,21 +160,6 @@ export function PDVInterface({
       return p.nome.toLowerCase().includes(searchLower);
     });
   }, [produtos, search, categoriaFiltro]);
-
-  // Quando o servidor confirma os itens (props mudam), descartamos otimistas
-  // já marcados como confirmados. Otimistas ainda em voo permanecem.
-  const itensServerKey = useMemo(() => {
-    if (!comandaAtiva) return "";
-    return (
-      comandaAtiva.itens.map((i) => i.id).join(",") +
-      "|" +
-      comandaAtiva.itensLivres.map((i) => i.id).join(",")
-    );
-  }, [comandaAtiva]);
-
-  useEffect(() => {
-    setOptimisticItems((prev) => prev.filter((o) => !o.confirmed));
-  }, [itensServerKey]);
 
   const optimisticPorComanda = useMemo(() => {
     const map = new Map<number, number>();
@@ -263,15 +265,6 @@ export function PDVInterface({
     });
   }
 
-  function scheduleRefresh() {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = setTimeout(() => {
-      startTransition(() => {
-        router.refresh();
-      });
-    }, 80);
-  }
-
   async function quickAddProduto(produto: ProdutoPDV, quantidade: number) {
     if (!comandaAtiva) {
       toast.error("Crie uma comanda antes de adicionar itens");
@@ -306,16 +299,17 @@ export function PDVInterface({
 
     const result = await adicionarItem(comandaId, formData);
 
-    if (!result.success) {
+    if (!result.success || !result.data) {
       setOptimisticItems((prev) => prev.filter((o) => o.tempId !== tempId));
       toast.error(result.error ?? "Erro ao adicionar item");
       return;
     }
 
-    setOptimisticItems((prev) =>
-      prev.map((o) => (o.tempId === tempId ? { ...o, confirmed: true } : o)),
-    );
-    scheduleRefresh();
+    // Comanda real já reflete a quantidade somada — substitui no state e
+    // descarta o otimista correspondente. Outros otimistas em voo (de
+    // cliques mais novos) continuam aparecendo até suas próprias responses.
+    mergeComanda(result.data.comanda);
+    setOptimisticItems((prev) => prev.filter((o) => o.tempId !== tempId));
   }
 
   function handleSelecionarProduto(produto: ProdutoPDV) {
@@ -341,16 +335,21 @@ export function PDVInterface({
     if (!comandaAtiva || realItemIds.length === 0) return;
     const comandaId = comandaAtiva.id;
     startTransition(async () => {
+      // Cada remoção retorna a comanda atualizada. Aplicamos a última (basta
+      // a versão mais recente — as queries serializam no Postgres).
       const results = await Promise.all(
         realItemIds.map((id) => removerItemComanda(id, comandaId)),
       );
       const erro = results.find((r) => !r.success);
       if (erro) {
         toast.error(erro.error ?? "Erro ao remover");
-      } else {
-        toast.success("Item removido");
-        router.refresh();
+        return;
       }
+      const ultimo = results[results.length - 1];
+      if (ultimo?.success && ultimo.data) {
+        mergeComanda(ultimo.data.comanda);
+      }
+      toast.success("Item removido");
     });
   }
 
@@ -359,9 +358,9 @@ export function PDVInterface({
     const comandaId = comandaAtiva.id;
     startTransition(async () => {
       const result = await removerItemLivre(itemId, comandaId);
-      if (result.success) {
+      if (result.success && result.data) {
+        mergeComanda(result.data.comanda);
         toast.success("Item removido");
-        router.refresh();
       } else {
         toast.error(result.error ?? "Erro ao remover");
       }
@@ -373,8 +372,8 @@ export function PDVInterface({
     const comandaId = comandaAtiva.id;
     startTransition(async () => {
       const result = await atualizarGarcomComanda(comandaId, garcomId);
-      if (result.success) {
-        router.refresh();
+      if (result.success && result.data) {
+        mergeComanda(result.data.comanda);
       } else {
         toast.error(result.error ?? "Erro ao atualizar garçom");
       }
@@ -390,7 +389,7 @@ export function PDVInterface({
         toast.success("Comanda cancelada");
         setCancelOpen(false);
         setComandaAtivaId(
-          comandasAbertas.find((c) => c.id !== comandaId)?.id ?? null,
+          comandasState.find((c) => c.id !== comandaId)?.id ?? null,
         );
         router.refresh();
       } else {
@@ -450,7 +449,7 @@ export function PDVInterface({
 
       {/* Abas de comandas */}
       <div className="flex flex-wrap items-center gap-2">
-        {comandasAbertas.map((c) => {
+        {comandasState.map((c) => {
           const valorOtim = optimisticPorComanda.get(c.id) ?? 0;
           const totalDisplay = Number(c.valorTotal) + valorOtim;
           return (
@@ -827,6 +826,7 @@ export function PDVInterface({
             open={itemLivreOpen}
             onOpenChange={setItemLivreOpen}
             comandaId={comandaAtiva.id}
+            onAdded={mergeComanda}
           />
 
           <FinalizarComandaDialog
@@ -854,7 +854,7 @@ export function PDVInterface({
         onOpenChange={setCloseCaixaOpen}
         sessao={sessao}
         resumo={resumo}
-        comandasAbertasCount={comandasAbertas.length}
+        comandasAbertasCount={comandasState.length}
       />
     </div>
   );

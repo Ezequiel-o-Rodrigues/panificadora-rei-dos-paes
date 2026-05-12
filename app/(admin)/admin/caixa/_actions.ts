@@ -9,11 +9,7 @@ import {
   pagamentosPix,
 } from "@/db/schema";
 import { requireUser } from "@/lib/session";
-import {
-  calcSubtotal,
-  toMoney,
-  toQty,
-} from "@/lib/calculations";
+import { calcSubtotal, toQty } from "@/lib/calculations";
 import { finalizarComandaCore } from "@/lib/modules/comandas/finalizar-core";
 import { criarPagamentoPixParaComanda } from "@/lib/modules/mercadopago/create-pix";
 import { createMpClient } from "@/lib/modules/mercadopago/client";
@@ -28,9 +24,33 @@ import {
   criarComandaSchema,
   finalizarComandaSchema,
 } from "@/lib/validators/comanda";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getConfigGorjeta, getProximoNumeroComanda } from "./_queries";
+import {
+  type ComandaPDV,
+  getConfigGorjeta,
+  getProximoNumeroComanda,
+} from "./_queries";
+
+// Carrega a comanda completa (com garcom, itens+produto, itensLivres) pra
+// devolver pro cliente após cada mutação. Substitui o `router.refresh()`
+// no PDVInterface — o cliente faz merge desse retorno no state local.
+async function loadComandaPDV(comandaId: number): Promise<ComandaPDV | null> {
+  const c = await db.query.comandas.findFirst({
+    where: eq(comandas.id, comandaId),
+    with: {
+      garcom: true,
+      itens: {
+        with: { produto: true },
+        orderBy: [asc(itensComanda.createdAt)],
+      },
+      itensLivres: {
+        orderBy: [asc(itensLivres.createdAt)],
+      },
+    },
+  });
+  return (c as ComandaPDV | undefined) ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // Tipos auxiliares
@@ -45,34 +65,6 @@ export type ActionResult<T = unknown> = {
 // ---------------------------------------------------------------------------
 // Helpers internos
 // ---------------------------------------------------------------------------
-
-/**
- * Recalcula o valorTotal da comanda somando itens (produtos) e itens livres.
- * NOTA: isto é chamado dentro de "transações" simuladas (o driver neon-http
- * não suporta transações reais; preservamos invariantes na ordem das operações).
- */
-async function recalcularTotalComanda(comandaId: number): Promise<number> {
-  const [itens, livres] = await Promise.all([
-    db.query.itensComanda.findMany({
-      where: eq(itensComanda.comandaId, comandaId),
-    }),
-    db.query.itensLivres.findMany({
-      where: eq(itensLivres.comandaId, comandaId),
-    }),
-  ]);
-
-  const subtotal = [
-    ...itens.map((i) => Number(i.subtotal)),
-    ...livres.map((i) => Number(i.subtotal)),
-  ].reduce((acc, n) => acc + n, 0);
-
-  await db
-    .update(comandas)
-    .set({ valorTotal: toMoney(subtotal) })
-    .where(eq(comandas.id, comandaId));
-
-  return subtotal;
-}
 
 // ---------------------------------------------------------------------------
 // Gestão de sessão
@@ -259,29 +251,34 @@ export async function criarComanda(
 export async function atualizarGarcomComanda(
   comandaId: number,
   garcomId: number | null,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ comanda: ComandaPDV }>> {
   try {
     await requireUser();
 
-    const comanda = await db.query.comandas.findFirst({
-      where: eq(comandas.id, comandaId),
-    });
-    if (!comanda) {
-      return { success: false, error: "Comanda não encontrada." };
-    }
-    if (comanda.status !== "aberta") {
-      return { success: false, error: "Comanda não está aberta." };
-    }
-
-    await db
+    // UPDATE com filtro de status='aberta' embutido — se a comanda não estiver
+    // aberta ou não existir, returning vem vazio e tratamos como erro.
+    const updated = await db
       .update(comandas)
       .set({ garcomId })
-      .where(eq(comandas.id, comandaId));
+      .where(and(eq(comandas.id, comandaId), eq(comandas.status, "aberta")))
+      .returning({
+        id: comandas.id,
+        caixaSessaoId: comandas.caixaSessaoId,
+      });
 
-    if (comanda.caixaSessaoId) {
-      revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
+    if (updated.length === 0) {
+      return { success: false, error: "Comanda não encontrada ou já fechada." };
     }
-    return { success: true };
+
+    const comanda = await loadComandaPDV(comandaId);
+    if (!comanda) {
+      return { success: false, error: "Comanda não encontrada após atualização." };
+    }
+
+    // revalidatePath omitido de propósito — o cliente faz merge do retorno
+    // no state local (Tier 2 Tarefa 4). Se outra aba/dispositivo estiver
+    // com a mesma sessão aberta, ela só pega o update ao recarregar.
+    return { success: true, data: { comanda } };
   } catch (error) {
     console.error("Erro ao atualizar garçom:", error);
     return { success: false, error: "Erro ao atualizar garçom." };
@@ -291,7 +288,7 @@ export async function atualizarGarcomComanda(
 export async function adicionarItem(
   comandaId: number,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ comanda: ComandaPDV }>> {
   try {
     await requireUser();
 
@@ -354,11 +351,12 @@ export async function adicionarItem(
       };
     }
 
-    const sessaoId = rows[0]!.caixa_sessao_id;
-    if (sessaoId) {
-      revalidatePath(`/admin/caixa/${sessaoId}`);
+    const comanda = await loadComandaPDV(comandaId);
+    if (!comanda) {
+      return { success: false, error: "Comanda não encontrada após atualização." };
     }
-    return { success: true };
+
+    return { success: true, data: { comanda } };
   } catch (error) {
     console.error("Erro ao adicionar item:", error);
     return { success: false, error: "Erro ao adicionar item." };
@@ -368,7 +366,7 @@ export async function adicionarItem(
 export async function adicionarItemLivre(
   comandaId: number,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ comanda: ComandaPDV }>> {
   try {
     await requireUser();
 
@@ -385,33 +383,46 @@ export async function adicionarItemLivre(
       };
     }
 
-    const comanda = await db.query.comandas.findFirst({
-      where: eq(comandas.id, comandaId),
-    });
-    if (!comanda) {
-      return { success: false, error: "Comanda não encontrada." };
-    }
-    if (comanda.status !== "aberta") {
+    const descricao = parsed.data.descricao.trim();
+    const qtd = toQty(parsed.data.quantidade);
+    const subtotal = calcSubtotal(parsed.data.quantidade, parsed.data.precoUnitario);
+
+    // CTE: valida comanda aberta + insere + recalc do valor_total numa só
+    // roundtrip. Se a comanda não estiver aberta, o INSERT vira no-op.
+    const result = await db.execute(sql`
+      WITH valido AS (
+        SELECT id, caixa_sessao_id
+        FROM comandas
+        WHERE id = ${comandaId} AND status = 'aberta'
+      ),
+      ins AS (
+        INSERT INTO itens_livres (comanda_id, descricao, quantidade, preco_unitario, subtotal)
+        SELECT id, ${descricao}, ${qtd}::numeric,
+               ${parsed.data.precoUnitario}::numeric, ${subtotal}::numeric
+        FROM valido
+        RETURNING comanda_id
+      )
+      UPDATE comandas
+      SET valor_total = (
+        COALESCE((SELECT SUM(subtotal) FROM itens_comanda WHERE comanda_id = comandas.id), 0) +
+        COALESCE((SELECT SUM(subtotal) FROM itens_livres   WHERE comanda_id = comandas.id), 0)
+      )
+      FROM ins
+      WHERE comandas.id = ins.comanda_id
+      RETURNING comandas.id, comandas.caixa_sessao_id
+    `);
+
+    const rows = (result as unknown as { rows: Array<{ caixa_sessao_id: number | null }> }).rows;
+    if (!rows || rows.length === 0) {
       return { success: false, error: "Comanda não está aberta." };
     }
 
-    const qtd = parsed.data.quantidade;
-    const subtotal = calcSubtotal(qtd, parsed.data.precoUnitario);
-
-    await db.insert(itensLivres).values({
-      comandaId,
-      descricao: parsed.data.descricao.trim(),
-      quantidade: toQty(qtd),
-      precoUnitario: parsed.data.precoUnitario,
-      subtotal,
-    });
-
-    await recalcularTotalComanda(comandaId);
-
-    if (comanda.caixaSessaoId) {
-      revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
+    const comanda = await loadComandaPDV(comandaId);
+    if (!comanda) {
+      return { success: false, error: "Comanda não encontrada após atualização." };
     }
-    return { success: true };
+
+    return { success: true, data: { comanda } };
   } catch (error) {
     console.error("Erro ao adicionar item livre:", error);
     return { success: false, error: "Erro ao adicionar item livre." };
@@ -421,37 +432,44 @@ export async function adicionarItemLivre(
 export async function removerItemComanda(
   itemId: number,
   comandaId: number,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ comanda: ComandaPDV }>> {
   try {
     await requireUser();
 
-    const comanda = await db.query.comandas.findFirst({
-      where: eq(comandas.id, comandaId),
-    });
+    // CTE: delete só se comanda aberta + item pertence à comanda. Recalcula
+    // valor_total numa só roundtrip. Se delete encontrou 0 linhas, retorna
+    // erro genérico.
+    const result = await db.execute(sql`
+      WITH del AS (
+        DELETE FROM itens_comanda ic
+        USING comandas c
+        WHERE ic.id = ${itemId}
+          AND ic.comanda_id = ${comandaId}
+          AND c.id = ic.comanda_id
+          AND c.status = 'aberta'
+        RETURNING ic.comanda_id
+      )
+      UPDATE comandas
+      SET valor_total = (
+        COALESCE((SELECT SUM(subtotal) FROM itens_comanda WHERE comanda_id = comandas.id), 0) +
+        COALESCE((SELECT SUM(subtotal) FROM itens_livres   WHERE comanda_id = comandas.id), 0)
+      )
+      FROM del
+      WHERE comandas.id = del.comanda_id
+      RETURNING comandas.id, comandas.caixa_sessao_id
+    `);
+
+    const rows = (result as unknown as { rows: Array<{ caixa_sessao_id: number | null }> }).rows;
+    if (!rows || rows.length === 0) {
+      return { success: false, error: "Item não encontrado ou comanda fechada." };
+    }
+
+    const comanda = await loadComandaPDV(comandaId);
     if (!comanda) {
-      return { success: false, error: "Comanda não encontrada." };
-    }
-    if (comanda.status !== "aberta") {
-      return { success: false, error: "Comanda não está aberta." };
+      return { success: false, error: "Comanda não encontrada após atualização." };
     }
 
-    const item = await db.query.itensComanda.findFirst({
-      where: and(
-        eq(itensComanda.id, itemId),
-        eq(itensComanda.comandaId, comandaId),
-      ),
-    });
-    if (!item) {
-      return { success: false, error: "Item não encontrado." };
-    }
-
-    await db.delete(itensComanda).where(eq(itensComanda.id, itemId));
-    await recalcularTotalComanda(comandaId);
-
-    if (comanda.caixaSessaoId) {
-      revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
-    }
-    return { success: true };
+    return { success: true, data: { comanda } };
   } catch (error) {
     console.error("Erro ao remover item:", error);
     return { success: false, error: "Erro ao remover item." };
@@ -461,37 +479,41 @@ export async function removerItemComanda(
 export async function removerItemLivre(
   itemId: number,
   comandaId: number,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ comanda: ComandaPDV }>> {
   try {
     await requireUser();
 
-    const comanda = await db.query.comandas.findFirst({
-      where: eq(comandas.id, comandaId),
-    });
+    const result = await db.execute(sql`
+      WITH del AS (
+        DELETE FROM itens_livres il
+        USING comandas c
+        WHERE il.id = ${itemId}
+          AND il.comanda_id = ${comandaId}
+          AND c.id = il.comanda_id
+          AND c.status = 'aberta'
+        RETURNING il.comanda_id
+      )
+      UPDATE comandas
+      SET valor_total = (
+        COALESCE((SELECT SUM(subtotal) FROM itens_comanda WHERE comanda_id = comandas.id), 0) +
+        COALESCE((SELECT SUM(subtotal) FROM itens_livres   WHERE comanda_id = comandas.id), 0)
+      )
+      FROM del
+      WHERE comandas.id = del.comanda_id
+      RETURNING comandas.id, comandas.caixa_sessao_id
+    `);
+
+    const rows = (result as unknown as { rows: Array<{ caixa_sessao_id: number | null }> }).rows;
+    if (!rows || rows.length === 0) {
+      return { success: false, error: "Item não encontrado ou comanda fechada." };
+    }
+
+    const comanda = await loadComandaPDV(comandaId);
     if (!comanda) {
-      return { success: false, error: "Comanda não encontrada." };
-    }
-    if (comanda.status !== "aberta") {
-      return { success: false, error: "Comanda não está aberta." };
+      return { success: false, error: "Comanda não encontrada após atualização." };
     }
 
-    const item = await db.query.itensLivres.findFirst({
-      where: and(
-        eq(itensLivres.id, itemId),
-        eq(itensLivres.comandaId, comandaId),
-      ),
-    });
-    if (!item) {
-      return { success: false, error: "Item não encontrado." };
-    }
-
-    await db.delete(itensLivres).where(eq(itensLivres.id, itemId));
-    await recalcularTotalComanda(comandaId);
-
-    if (comanda.caixaSessaoId) {
-      revalidatePath(`/admin/caixa/${comanda.caixaSessaoId}`);
-    }
-    return { success: true };
+    return { success: true, data: { comanda } };
   } catch (error) {
     console.error("Erro ao remover item livre:", error);
     return { success: false, error: "Erro ao remover item livre." };

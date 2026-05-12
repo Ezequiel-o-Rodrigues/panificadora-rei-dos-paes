@@ -1,24 +1,25 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button, Dialog, DialogFooter, Input } from "@/components/admin";
 import { formatBRL } from "@/lib/money";
 import { adicionarItemLivre } from "../_actions";
+import type { ComandaPDV } from "../_queries";
 
 interface ItemLivreDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   comandaId: number;
+  onAdded?: (comanda: ComandaPDV) => void;
 }
 
 export function ItemLivreDialog({
   open,
   onOpenChange,
   comandaId,
+  onAdded,
 }: ItemLivreDialogProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [descricao, setDescricao] = useState("");
@@ -63,10 +64,10 @@ export function ItemLivreDialog({
       formData.set("precoUnitario", precoNum.toFixed(2));
 
       const result = await adicionarItemLivre(comandaId, formData);
-      if (result.success) {
+      if (result.success && result.data) {
         toast.success("Item livre adicionado");
         onOpenChange(false);
-        router.refresh();
+        if (onAdded) onAdded(result.data.comanda);
       } else {
         toast.error(result.error ?? "Erro ao adicionar item");
       }
