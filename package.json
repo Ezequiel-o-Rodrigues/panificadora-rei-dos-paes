@@ -15,7 +15,8 @@
     "db:seed": "tsx --env-file=.env.local db/seed.ts",
     "migrate:validate": "tsx --env-file=.env.local scripts/validate-migration.ts",
     "desktop:dev": "concurrently -k -n NEXT,ELECTRON -c blue,magenta \"next dev --turbopack\" \"wait-on tcp:3000 && node desktop/launch.cjs\"",
-    "desktop:build": "cross-env BUILD_TARGET=desktop next build && node desktop/prepare-standalone.cjs",
+    "desktop:icon": "node scripts/generate-icon.cjs",
+    "desktop:build": "node scripts/generate-icon.cjs && cross-env BUILD_TARGET=desktop next build && node desktop/prepare-standalone.cjs",
     "desktop:dist": "npm run desktop:build && electron-builder --win",
     "desktop:pack": "npm run desktop:build && electron-builder --win --dir"
   },
@@ -79,6 +80,7 @@
     },
     "files": [
       "desktop/main.cjs",
+      "desktop/build-resources/icon.ico",
       ".next/standalone/**/*",
       "package.json",
       "!**/.env*",
@@ -87,6 +89,7 @@
     ],
     "asar": false,
     "win": {
+      "icon": "desktop/build-resources/icon.ico",
       "target": [
         {
           "target": "nsis",

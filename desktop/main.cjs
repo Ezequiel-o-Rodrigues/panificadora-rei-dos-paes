@@ -69,6 +69,7 @@ const DEV_URL = process.env.DESKTOP_DEV_URL || "http://localhost:3000/admin";
 const PROD_URL = `http://127.0.0.1:${PROD_PORT}/admin`;
 
 let mainWindow = null;
+let splashWindow = null;
 let nextServerProcess = null;
 
 // ---------------------------------------------------------------------------
@@ -223,6 +224,85 @@ function stopNextServer() {
 }
 
 // ---------------------------------------------------------------------------
+// Splash (mostrado enquanto o Next standalone sobe — ~3-5s em produção)
+// ---------------------------------------------------------------------------
+
+const SPLASH_HTML = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;user-select:none;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fafaf5;
+  background:radial-gradient(circle at 50% 38%,rgba(255,109,10,.18),transparent 60%),#0a0a0a}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.logo{width:96px;height:96px;border-radius:50%;background:#0c0a09;
+  box-shadow:0 0 0 1px rgba(255,140,40,.5),0 8px 30px rgba(255,109,10,.25);
+  display:flex;align-items:center;justify-content:center;
+  animation:flicker 2.4s ease-in-out infinite}
+@keyframes flicker{
+  0%,100%{box-shadow:0 0 0 1px rgba(255,140,40,.5),0 8px 30px rgba(255,109,10,.25)}
+  50%{box-shadow:0 0 0 1px rgba(255,140,40,.75),0 14px 44px rgba(255,109,10,.5)}}
+.nome{font-size:22px;font-weight:700;letter-spacing:.04em;
+  background:linear-gradient(135deg,#ffa855 0%,#ff6d0a 60%,#dc2626 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;color:transparent}
+.sub{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:#a8a29e;margin-top:-2px}
+.loading{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:#78716c}
+.sp{width:14px;height:14px;border:2px solid rgba(255,109,10,.3);
+  border-top-color:#ff6d0a;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body>
+<div class="logo">
+<svg viewBox="0 0 48 48" width="64" height="64" aria-hidden="true">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#ffa855"/><stop offset="55%" stop-color="#ff6d0a"/>
+<stop offset="100%" stop-color="#dc2626"/></linearGradient></defs>
+<path d="M24 6 C22 10 22 12 24 14 C26 12 26 10 24 6 Z" fill="#ffa855"/>
+<path d="M7 32 L10 17 L17 23 L24 13 L31 23 L38 17 L41 32 Z"
+  fill="url(#g)" stroke="#ff8c28" stroke-width=".6" stroke-linejoin="round"/>
+<rect x="7" y="31" width="34" height="5" rx="1.2"
+  fill="url(#g)" stroke="#ff8c28" stroke-width=".6"/>
+<circle cx="17" cy="22" r="1.2" fill="#fafaf5" opacity=".9"/>
+<circle cx="24" cy="13" r="1.3" fill="#fafaf5" opacity=".9"/>
+<circle cx="31" cy="22" r="1.2" fill="#fafaf5" opacity=".9"/>
+</svg></div>
+<div class="nome">Painel Padaria</div>
+<div class="sub">Rei dos Pães</div>
+<div class="loading"><div class="sp"></div><span>Carregando…</span></div>
+</body></html>`;
+
+function createSplash() {
+  splashWindow = new BrowserWindow({
+    width: 380,
+    height: 320,
+    frame: false,
+    resizable: false,
+    movable: true,
+    skipTaskbar: false,
+    title: "Painel Padaria",
+    backgroundColor: "#0a0a0a",
+    icon: path.join(__dirname, "build-resources", "icon.ico"),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  splashWindow.loadURL(
+    `data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`,
+  );
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+}
+
+function closeSplash() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+  }
+  splashWindow = null;
+}
+
+// ---------------------------------------------------------------------------
 // Janela
 // ---------------------------------------------------------------------------
 
@@ -232,15 +312,21 @@ function createWindow(targetUrl) {
     height: 800,
     minWidth: 1024,
     minHeight: 600,
+    show: false, // só aparece em ready-to-show — splash continua até lá
     title: "Painel Padaria — Rei dos Pães",
     backgroundColor: "#0a0a0a",
     autoHideMenuBar: true,
-    icon: path.join(__dirname, "assets", "icon.ico"),
+    icon: path.join(__dirname, "build-resources", "icon.ico"),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    closeSplash();
   });
 
   Menu.setApplicationMenu(null);
@@ -279,11 +365,18 @@ async function bootstrap() {
   loadEnvFile();
 
   if (isDev) {
+    // Em dev o `next dev` já tá no ar via concurrently — sem splash, abre
+    // direto pra economizar 1 ciclo de render.
     createWindow(DEV_URL);
     return;
   }
 
+  // Em produção o splash cobre o tempo de inicialização do Next standalone
+  // (~3-5s). É fechado no `ready-to-show` da janela principal ou em erro.
+  createSplash();
+
   if (!process.env.DATABASE_URL) {
+    closeSplash();
     dialog.showErrorBox(
       "Configuração ausente",
       "DATABASE_URL não foi encontrada.\n\n" +
@@ -298,6 +391,7 @@ async function bootstrap() {
     await startNextServer();
     createWindow(PROD_URL);
   } catch (err) {
+    closeSplash();
     log("[bootstrap] falha ao iniciar:", err);
     dialog.showErrorBox(
       "Falha ao iniciar",
