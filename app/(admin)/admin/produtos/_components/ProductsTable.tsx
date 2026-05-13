@@ -12,7 +12,7 @@ import {
   deleteProduto,
 } from "../_actions";
 import type { Produto, Categoria } from "@/db/schema";
-import { Eye, EyeOff, Power, PowerOff, AlertTriangle, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Power, PowerOff, AlertTriangle, Trash2, Pencil } from "lucide-react";
 
 type ProdutoComCategoria = Produto & { categoria: Categoria };
 
@@ -242,18 +242,30 @@ export function ProductsTable({ produtos, categorias }: ProductsTableProps) {
     {
       key: "acoes",
       header: "",
-      className: "w-12 text-center",
+      className: "w-24 text-center",
       render: (row) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeletingProduto(row);
-          }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-rust-400 hover:text-rust-300 hover:bg-onyx-800/50 transition-colors cursor-pointer"
-          title="Excluir produto"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/admin/produtos/${row.id}`);
+            }}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-flame-400 hover:text-flame-300 hover:bg-onyx-800/50 transition-colors cursor-pointer"
+            title="Editar produto"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeletingProduto(row);
+            }}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-rust-400 hover:text-rust-300 hover:bg-onyx-800/50 transition-colors cursor-pointer"
+            title="Excluir produto"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       ),
     },
   ];
